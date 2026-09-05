@@ -7,7 +7,8 @@
   "scripts": {
     "build": "node build.mjs",
     "dev": "node dev.mjs",
-    "lint": "node scripts/lint-terms.mjs"
+    "lint": "node scripts/lint-terms.mjs",
+    "new": "node scripts/new-term.mjs"
   },
   "keywords": [
     "ai-agent",

@@ -45,6 +45,7 @@ function no(slug) {
 }
 
 let kw = '';
+let kwRaw = '';
 let cat = '';
 let kind = '';
 let idx = 0;
@@ -140,11 +141,27 @@ function foot(t) {
   return t.origin ? `<div class="foot"><b>出身</b> ${esc(t.origin)}</div>` : '';
 }
 
+/* 投喂位：图鉴缺口处的收编入口。用户带着词来搜却没搜到，正是最强的投稿动机 */
+function lure(title, desc) {
+  return (
+    `<div class="lure"><div class="lure-t">${esc(title)}</div>` +
+    `<div class="lure-d">${esc(desc)}</div>` +
+    `<a class="cta" href="${esc(SUB)}" target="_blank" rel="noopener noreferrer">投它进图鉴 →</a></div>`
+  );
+}
+
 function renderDict() {
   const list = filtered();
   const total = list.length;
   if (!total) {
-    $('#files').innerHTML = '<div class="void">这一片没有黑话出没</div>';
+    $('#files').innerHTML =
+      `<div class="void">这一片没有黑话出没</div>` +
+      (SUB
+        ? lure(
+            kwRaw ? `「${kwRaw}」还没被登记` : '这里还空着',
+            kwRaw ? '你撞见它的第一现场——丢过来，给它建张卡' : '丢一个词进来，这片就热闹了'
+          )
+        : '');
     return;
   }
   idx = Math.min(Math.max(idx, 0), total - 1);
@@ -157,7 +174,11 @@ function renderDict() {
     `<span class="count">${idx + 1} / ${total}<small>${total !== TERMS.length ? '已筛选' : '已收录'}</small></span>` +
     `<button class="pg" id="pg-next"${idx === total - 1 ? ' disabled' : ''}>下一只 →</button>` +
     `</div>` +
-    card(t);
+    card(t) +
+    /* 翻到最后一只：图鉴的边界就是投稿入口——你撞见的下一只，图鉴里还没有 */
+    (idx === total - 1 && SUB
+      ? lure('图鉴到这里就翻完了', `在册 ${TERMS.length} 只。你撞见的下一只词，丢过来，给它建张卡`)
+      : '');
   $('#pg-prev').onclick = () => nav(-1);
   $('#pg-next').onclick = () => nav(1);
   [...$('#files').querySelectorAll('.scratch:not(.open)')].forEach(initScratch);
@@ -188,7 +209,8 @@ $('#chips').onclick = (e) => {
   refilter();
 };
 $('#q').oninput = (e) => {
-  kw = e.target.value.trim().toLowerCase();
+  kwRaw = e.target.value.trim();
+  kw = kwRaw.toLowerCase();
   refilter();
 };
 
@@ -530,7 +552,7 @@ function renderResult() {
           .join('')}</div>`
       : '') +
     `<button class="go" id="again">再来一局</button>` +
-    (SUB ? `<a class="cta" href="${esc(SUB)}" target="_blank" rel="noopener noreferrer">路上撞见新黑话？投它进图鉴 →</a>` : '') +
+    (SUB ? `<a class="cta" href="${esc(SUB)}" target="_blank" rel="noopener noreferrer">路上还有新黑话？丢过来——你投的词，会变成下一张卡 →</a>` : '') +
     `</div></div>`;
   $('#again').onclick = startQuiz;
 }

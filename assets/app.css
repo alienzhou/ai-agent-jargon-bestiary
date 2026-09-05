@@ -464,6 +464,20 @@ button:focus:not(:focus-visible), summary:focus:not(:focus-visible) { outline: n
   opacity: 0.5;
 }
 
+/* 投喂位：空结果 / 翻到底时的收编卡，跟 .void 一虚一实——这里要人点 */
+.lure {
+  margin-top: 14px;
+  padding: 22px 18px;
+  text-align: center;
+  border: 4px solid var(--ink);
+  border-radius: 18px;
+  background: var(--gold);
+  box-shadow: var(--shadow);
+}
+.lure-t { font-size: 17px; font-weight: 900; letter-spacing: 0.05em; }
+.lure-d { margin-top: 6px; font-size: 12.5px; font-weight: 700; line-height: 1.6; opacity: 0.78; }
+.lure .cta { margin-top: 11px; font-size: 14px; }
+
 /* ============ 遭遇战 ============ */
 .field {
   position: relative;

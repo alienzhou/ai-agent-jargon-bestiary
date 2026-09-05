@@ -180,7 +180,7 @@ function html(terms, dev, sub = {}) {
   const target = sub.url || sub.github || '';
   const coin = target
     ? ` <a class="fbtn coinbtn" href="${attr(target)}" target="_blank" rel="noopener noreferrer"` +
-      ` title="${attr(sub.hint || '撞见新黑话？把原话丢过来')}">${sub.label || '投词'}</a>`
+      ` title="${attr(sub.hint || '撞见没登记的词？投喂它')}">${sub.label || '投喂'}</a>`
     : '';
   const ghLink = sub.github
     ? ` · <a href="${attr(sub.github)}" target="_blank" rel="noopener noreferrer">GitHub 递词</a>`
