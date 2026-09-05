@@ -1,0 +1,23 @@
+{
+  "name": "ai-agent-jargon-bestiary",
+  "version": "0.1.0",
+  "private": false,
+  "description": "A living bestiary of AI agent jargon — translate the spell, reveal the creature.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node dev.mjs",
+    "lint": "node scripts/lint-terms.mjs"
+  },
+  "keywords": [
+    "ai-agent",
+    "ai-jargon",
+    "glossary",
+    "lexicon",
+    "bestiary"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "js-yaml": "^4.1.1"
+  }
+}

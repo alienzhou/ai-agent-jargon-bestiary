@@ -1,0 +1,14 @@
+# macOS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Dependencies
+node_modules/
+
+# Source art is deliberately local-only: public repo ships compressed assets only.
+assets/img/*.png
+assets/img/_retired/
+
+# Build metadata
+npm-debug.log*

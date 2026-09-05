@@ -1,0 +1,684 @@
+/* AI 黑话图鉴 —— 复古街机卡牌 / 丝网印
+   设计原则：元素少而大。一屏一张卡，粗描边 + 硬阴影，不做细碎装饰堆叠。 */
+:root {
+  --paper: #f2e8d5;
+  --card: #fffaf0;
+  --ink: #1a1815;
+  --red: #b4342c;
+  --gold: #c9a227;
+  --blue: #2f5d7c;
+  --dim: #7b7263;
+  --line: #1a1815;
+  --shadow: 6px 6px 0 var(--ink);
+  --shadow-sm: 4px 4px 0 var(--ink);
+  /* 顶部条实测高度，由 app.js 的 syncTopH() 写入。翻页条靠它吸在顶部条正下方 */
+  --topH: 50px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.7 system-ui, -apple-system, 'PingFang SC', 'Noto Sans CJK SC', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 丝网印半调网点底纹：整页唯一的纹理，不再叠别的 */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(var(--ink) 1px, transparent 1.2px);
+  background-size: 7px 7px;
+  opacity: 0.07;
+}
+
+img { max-width: 100%; }
+button { font: inherit; cursor: pointer; }
+button:focus-visible, summary:focus-visible, input:focus-visible, a:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+button:focus:not(:focus-visible), summary:focus:not(:focus-visible) { outline: none; }
+
+/* ============ 开场：投币启动 ============ */
+#boot {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: var(--red);
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: var(--paper);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+  cursor: pointer;
+}
+#boot.gone { opacity: 0; transform: scale(1.08); pointer-events: none; }
+#boot .logo {
+  font-size: clamp(38px, 11vw, 78px);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1.06;
+  text-shadow: 5px 5px 0 var(--ink);
+}
+#boot .sub {
+  margin-top: 14px;
+  font-size: 13px;
+  letter-spacing: 0.4em;
+  opacity: 0.85;
+  text-transform: uppercase;
+}
+#boot .guide { width: min(190px, 44vw); margin: 26px auto 0; display: block; }
+#boot .coin {
+  margin-top: 26px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  animation: blink 1s steps(2) infinite;
+}
+@keyframes blink { 50% { opacity: 0.15; } }
+
+/* ============ 页面骨架 ============ */
+.wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 18px calc(60px + env(safe-area-inset-bottom));
+}
+
+/* 顶部条：标题 + 搜筛开关 + 模式切换，压成常驻一行并吸顶。
+   首屏空间全部让给卡片——搜索和筛选默认收起，要用才展开。 */
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 -18px;
+  padding: 9px 18px 8px;
+  background: var(--paper);
+  border-bottom: 3px solid var(--line);
+}
+.brand {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  margin-right: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.brand small {
+  margin-left: 7px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--dim);
+  white-space: nowrap;
+}
+.tab, .fbtn {
+  padding: 7px 14px;
+  border: 3px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 13px;
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+  transition: 0.12s;
+  white-space: nowrap;
+}
+.tab:hover, .fbtn:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--ink); }
+.tab:active, .fbtn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
+.tab.on { background: var(--ink); color: var(--paper); }
+/* 筛选开关本身就是状态显示器：收起时也能看到筛在哪 */
+.fbtn.act { background: var(--gold); }
+.fbtn.open { background: var(--ink); color: var(--paper); }
+.fbtn i { font-style: normal; opacity: 0.55; margin-left: 4px; font-size: 11px; }
+/* 投词：常驻 header 的金币按钮，新标签打开收集表单，不掺单页路由 */
+.coinbtn { display: inline-block; background: var(--gold); text-decoration: none; }
+
+/* 搜索 + 筛选：折叠面板，默认不占位 */
+.ctl { margin-bottom: 0; }
+.ctl.open { margin-bottom: 14px; }
+.ctl .panel { padding-top: 14px; }
+.ctl:not(.open) .panel { display: none; }
+#q {
+  width: 100%;
+  padding: 12px 16px;
+  border: 3px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  outline: none;
+  box-shadow: var(--shadow-sm);
+}
+#q::placeholder { color: var(--dim); font-weight: 500; }
+#q:focus { background: #fffdf6; border-color: var(--ink); box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.35), var(--shadow-sm); }
+.chips { margin-top: 12px; }
+.chips .row { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips .row + .row { margin-top: 8px; padding-top: 8px; border-top: 2px dashed rgba(26, 24, 21, 0.18); }
+.chip {
+  padding: 5px 13px;
+  border: 2.5px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  transition: 0.12s;
+}
+.chip:hover { background: rgba(0, 0, 0, 0.08); transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--ink); }
+.chip:active { transform: translate(2px, 2px); box-shadow: none; }
+.chip.on { background: var(--gold); box-shadow: var(--shadow-sm); }
+.kchip.on { background: var(--blue); color: var(--paper); }
+
+/* ============ 图鉴卡牌：一屏一张，元素大 ============ */
+#files, #quiz { display: block; }
+#quiz { padding-top: 16px; }
+/* 图鉴态首元素是自带内边距的吸顶翻页条，这里不再补 padding */
+#files[hidden], #quiz[hidden] { display: none; }
+.card {
+  position: relative;
+  background: var(--card);
+  border: 4px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 0 0 22px;
+  overflow: hidden;
+  animation: deal 0.34s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+@keyframes deal {
+  from { opacity: 0; transform: translateY(18px) rotate(-1.2deg) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 卡头：编号条 + 稀有度，一条搞定 */
+.card .banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+.card .banner .no { opacity: 0.65; }
+.card .banner .rare { margin-left: auto; color: var(--gold); letter-spacing: 0.1em; }
+
+/* 卡头：立绘 + 词头左右并排。竖排要吃掉近 300px，横排 160px 就够，
+   省下来的高度让整张卡能进首屏。 */
+.head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px 15px;
+  background:
+    repeating-linear-gradient(-45deg, rgba(180, 52, 44, 0.09) 0 12px, transparent 12px 24px);
+  border-bottom: 3px dashed var(--line);
+}
+.art { flex: none; }
+.art img { width: clamp(88px, 26vw, 124px); display: block; filter: drop-shadow(4px 5px 0 rgba(0, 0, 0, 0.14)); }
+.art .none {
+  width: clamp(88px, 26vw, 124px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  font-size: 44px;
+  font-weight: 900;
+  color: var(--ink);
+  border: 4px dashed var(--line);
+  border-radius: 16px;
+  opacity: 0.35;
+}
+
+/* 词头：全卡最大的字 */
+.name { min-width: 0; flex: 1; }
+.name .hw {
+  font-size: clamp(26px, 6.6vw, 38px);
+  font-weight: 900;
+  line-height: 1.14;
+  letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
+}
+.name .sub {
+  margin-top: 3px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dim);
+  overflow-wrap: anywhere;
+}
+.name .sub .slug { font-family: ui-monospace, Menlo, monospace; opacity: 0.7; margin-left: 6px; }
+/* 分类 / 词性徽章：从浮在立绘角上改到词头下方，不再绝对定位 */
+.badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.badges span {
+  padding: 3px 11px;
+  border: 3px solid var(--line);
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.badges .cat { background: var(--red); color: var(--paper); }
+.badges .k-term { background: var(--blue); color: var(--paper); }
+.badges .k-alias { background: var(--paper); color: var(--ink); }
+
+/* 内容块：原话照录打头（共鸣钩子），「人话」翻译刮出来 */
+.body { padding: 4px 20px 0; }
+
+/* 原话照录：全卡的钩子，一开口就让人应激 */
+.quote {
+  position: relative;
+  margin-top: 14px;
+  padding: 20px 18px 13px;
+  background: var(--card);
+  border: 3px solid var(--line);
+  border-radius: 14px;
+}
+.quote::after {
+  content: '\201C';
+  position: absolute;
+  top: 0;
+  right: 14px;
+  font-size: 72px;
+  font-weight: 900;
+  line-height: 1;
+  color: rgba(180, 52, 44, 0.14);
+  pointer-events: none;
+}
+.quote .tag {
+  position: absolute;
+  top: -13px;
+  left: 14px;
+  z-index: 2;
+  padding: 2px 11px;
+  background: var(--ink);
+  color: var(--paper);
+  border: 3px solid var(--line);
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+.quote .say {
+  font-size: 19.5px;
+  font-weight: 800;
+  line-height: 1.62;
+}
+.quote .yi {
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 2px dashed rgba(26, 24, 21, 0.22);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dim);
+}
+.quote .yi::before { content: '译 → '; color: var(--red); font-weight: 900; }
+.bubble {
+  position: relative;
+  margin-top: 14px;
+  padding: 16px 18px;
+  background: var(--paper);
+  border: 3px solid var(--line);
+  border-radius: 14px;
+  font-size: 16.5px;
+  line-height: 1.75;
+  font-weight: 600;
+}
+.bubble .tag {
+  position: absolute;
+  top: -13px;
+  left: 14px;
+  padding: 2px 11px;
+  background: var(--gold);
+  border: 3px solid var(--line);
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+.bubble.truth { background: var(--card); }
+.bubble.truth .tag { background: var(--red); color: var(--paper); }
+
+/* 词条本体高亮：荧光笔涂满 + 红笔划线，要在原话里一眼弹出来 */
+.hl {
+  background: linear-gradient(rgba(201, 162, 39, 0.34), rgba(201, 162, 39, 0.34));
+  box-shadow: inset 0 -3px 0 var(--red);
+  font-weight: 900;
+  padding: 0 3px;
+  border-radius: 3px;
+}
+
+/* 刮刮卡：整个「人话」气泡都是刮奖区，canvas 涂层铺满方框，拿硬币刮哪露哪 */
+.scratch:not(.open) {
+  user-select: none;
+  /* 金币光标：投币进场，金币刮奖 */
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><circle cx='15' cy='15' r='12' fill='%23c9a227' stroke='%231a1815' stroke-width='3.5'/><circle cx='15' cy='15' r='5.5' fill='none' stroke='%231a1815' stroke-width='2.5'/></svg>") 15 15, pointer;
+}
+.scratch canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 11px;
+  z-index: 1;
+  touch-action: none; /* 手机上刮的时候别把页面滚走了 */
+}
+/* 「人话」标签浮在涂层之上，刮之前就知道这是什么 */
+.bubble .tag { z-index: 2; }
+/* 未刮开时撑出刮奖票的体积；刮开后回落到文字高度 */
+.bubble.scratch:not(.open) { min-height: 108px; }
+.bubble.scratch { transition: min-height 0.25s ease; }
+.scratch canvas.gone {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+.scratch.open { cursor: default; animation: pop 0.34s ease both; }
+@keyframes pop {
+  0% { transform: scale(0.97); }
+  55% { transform: scale(1.03); }
+  100% { transform: none; }
+}
+
+/* 别名标签 */
+.tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+.tags i {
+  font-style: normal;
+  padding: 3px 11px;
+  border: 2.5px solid var(--line);
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  background: var(--card);
+}
+
+
+/* 卡脚：词源 / 批注 / 立案，压成一段小字，不再各占一行分区 */
+.foot {
+  margin: 16px 20px 0;
+  padding-top: 14px;
+  border-top: 3px dotted var(--line);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--dim);
+  font-weight: 600;
+}
+.foot b { color: var(--ink); }
+
+/* ============ 翻页：大按钮，游戏机手感 ============
+   位置在卡片之上并吸顶。卡片高度随词条长短浮动，按钮若跟在卡尾，
+   每翻一只都要重新找它；钉在顶部条下方后坐标恒定，可以连点。 */
+.pager {
+  position: sticky;
+  top: var(--topH);
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* 拉满出血 + 同色底，卡片从它下面滚过去而不是叠在上面 */
+  margin: 0 -18px 16px;
+  padding: 10px 18px 12px;
+  background: var(--paper);
+}
+.pg {
+  flex: 1;
+  padding: 14px 10px;
+  border: 4px solid var(--line);
+  border-radius: 14px;
+  background: var(--gold);
+  font-weight: 900;
+  font-size: 15px;
+  box-shadow: var(--shadow);
+  transition: 0.1s;
+}
+.pg:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--ink); }
+.pg:active:not(:disabled) { transform: translate(5px, 5px); box-shadow: 1px 1px 0 var(--ink); }
+.pg:disabled { background: #ddd4c0; opacity: 0.5; cursor: default; box-shadow: var(--shadow-sm); }
+.count {
+  min-width: 96px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+.count small { display: block; font-size: 10px; color: var(--dim); letter-spacing: 0.14em; font-weight: 700; }
+
+.void {
+  margin-top: 16px;
+  padding: 60px 20px;
+  text-align: center;
+  font-weight: 800;
+  border: 4px dashed var(--line);
+  border-radius: 18px;
+  opacity: 0.5;
+}
+
+/* ============ 遭遇战 ============ */
+.field {
+  position: relative;
+  border: 4px solid var(--line);
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  padding: 18px 18px 22px;
+  overflow: hidden;
+}
+.field.hit { animation: shake 0.4s ease both; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-9px) rotate(-0.6deg); }
+  45% { transform: translateX(8px) rotate(0.6deg); }
+  70% { transform: translateX(-5px); }
+}
+
+/* 血条 HUD */
+.hud { display: flex; align-items: center; gap: 12px; font-size: 12.5px; font-weight: 900; letter-spacing: 0.06em; }
+.hud .hp { flex: 1; height: 14px; border: 3px solid var(--line); border-radius: 999px; background: var(--paper); overflow: hidden; }
+.hud .hp i { display: block; height: 100%; background: var(--red); transition: width 0.4s cubic-bezier(0.2, 0.9, 0.3, 1); }
+
+/* 怪物登场 */
+.foe { display: grid; place-items: center; padding: 12px 0 6px; }
+.foe img { width: min(190px, 46vw); filter: drop-shadow(5px 6px 0 rgba(0, 0, 0, 0.14)); animation: bob 2.2s ease-in-out infinite; }
+@keyframes bob { 50% { transform: translateY(-9px); } }
+.foe.dmg img { animation: dmg 0.4s steps(2) 3; }
+@keyframes dmg { 50% { opacity: 0.15; filter: none; } }
+.foe .plate {
+  margin-top: 8px;
+  padding: 7px 20px;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 999px;
+  font-size: clamp(20px, 5vw, 28px);
+  font-weight: 900;
+}
+.ask {
+  margin: 16px 0 14px;
+  text-align: center;
+  font-size: 15.5px;
+  font-weight: 800;
+}
+.ask small { display: block; margin-top: 3px; font-size: 11.5px; color: var(--dim); font-weight: 700; letter-spacing: 0.1em; }
+
+.opt {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px 14px 50px;
+  margin-bottom: 10px;
+  border: 3px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  font-size: 15.5px;
+  font-weight: 600;
+  line-height: 1.65;
+  position: relative;
+  box-shadow: var(--shadow-sm);
+  transition: 0.1s;
+}
+.opt .ltr {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 2.5px solid var(--line);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 900;
+  background: var(--card);
+}
+.opt:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--ink); }
+.opt:disabled { cursor: default; box-shadow: none; }
+.opt.yes { background: var(--gold); }
+.opt.no { background: #e7d9c6; }
+.opt.out { opacity: 0.42; }
+.why {
+  display: block;
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 2.5px dashed var(--line);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #4a453b;
+}
+
+/* 判决 */
+.verdict { margin-top: 16px; padding: 16px; border: 4px solid var(--line); border-radius: 14px; background: var(--paper); }
+.verdict .k { display: inline-block; min-width: 46px; font-weight: 900; color: var(--red); }
+.verdict p { margin: 0 0 7px; font-size: 14.5px; font-weight: 600; }
+.pop {
+  position: absolute;
+  right: 22px;
+  top: 84px;
+  font-size: 42px;
+  font-weight: 900;
+  color: var(--red);
+  text-shadow: 3px 3px 0 var(--ink);
+  pointer-events: none;
+  animation: fly 0.9s ease-out both;
+}
+@keyframes fly {
+  0% { opacity: 0; transform: scale(0.4) translateY(10px); }
+  25% { opacity: 1; transform: scale(1.25) translateY(-6px); }
+  100% { opacity: 0; transform: scale(1) translateY(-46px); }
+}
+.go {
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px;
+  border: 4px solid var(--line);
+  border-radius: 14px;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 900;
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  box-shadow: var(--shadow);
+}
+.go { cursor: pointer; transition: 0.1s; }
+.go:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--ink); }
+.go:active { transform: translate(5px, 5px); box-shadow: 1px 1px 0 var(--ink); }
+
+/* 结算 */
+.result { text-align: center; padding: 26px 6px 10px; }
+.result img.guide { width: min(180px, 44vw); }
+.result .n { font-size: 66px; font-weight: 900; line-height: 1.05; }
+.result .n small { font-size: 22px; color: var(--dim); }
+.result .cap {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 8px 18px;
+  background: var(--gold);
+  border: 4px solid var(--line);
+  border-radius: 999px;
+  font-weight: 900;
+  box-shadow: var(--shadow-sm);
+}
+.leaks { margin: 24px auto 0; max-width: 440px; text-align: left; }
+.leaks h4 { margin: 0 0 10px; font-size: 13px; letter-spacing: 0.14em; }
+.leaks div { padding: 8px 12px; margin-bottom: 8px; border: 3px solid var(--line); border-radius: 12px; background: var(--paper); font-size: 14px; font-weight: 600; }
+.leaks b { font-weight: 900; }
+
+footer {
+  margin-top: 34px;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+}
+footer a { color: var(--dim); text-decoration: underline dotted; }
+footer a:hover { color: var(--ink); }
+
+/* 遭遇战结算：投词 CTA，一条安静的收编链接 */
+.cta {
+  display: inline-block;
+  margin-top: 13px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--red);
+  text-decoration: underline dotted;
+}
+.cta:hover { color: var(--ink); }
+
+/* ============ 移动端 H5 ============ */
+@media (max-width: 560px) {
+  body { font-size: 15px; }
+  .wrap { padding: 0 12px calc(50px + env(safe-area-inset-bottom)); }
+  .top { margin: 0 -12px; padding: 8px 12px 7px; gap: 6px; }
+  .brand { font-size: 15px; }
+  /* 手机上「6 只在册」不值一屏宽度，标题让位给按钮 */
+  .brand small { display: none; }
+  .tab, .fbtn { padding: 7px 11px; font-size: 12px; border-width: 2.5px; }
+  .fbtn i { display: none; }
+
+  .card { border-width: 3px; border-radius: 15px; box-shadow: var(--shadow-sm); }
+  .card .banner { font-size: 10.5px; letter-spacing: 0.06em; padding: 8px 14px; }
+  .head { gap: 12px; padding: 12px 14px 13px; }
+  .body { padding: 4px 14px 0; }
+  .foot { margin: 14px 14px 0; }
+  .name .hw { font-size: clamp(24px, 7.4vw, 32px); }
+  .name .sub { font-size: 12px; }
+  /* slug 是给桌面读者的注脚，小屏直接省掉一行 */
+  .name .sub .slug { display: none; }
+
+  .quote { padding: 18px 14px 12px; }
+  .quote .say { font-size: 17px; line-height: 1.58; }
+  .bubble { padding: 15px 14px; font-size: 15.5px; }
+
+  .pager { margin: 0 -12px 12px; padding: 8px 12px 10px; gap: 8px; }
+  .pg { font-size: 13px; padding: 12px 6px; border-width: 3px; }
+  .count { min-width: 72px; font-size: 12px; }
+
+  .field { padding: 14px 14px 18px; border-width: 3px; }
+  .opt { padding: 12px 13px 12px 44px; font-size: 14.5px; }
+  .opt .ltr { left: 10px; top: 11px; }
+  .pop { right: 14px; top: 70px; font-size: 34px; }
+}
+
+/* 触屏没有 hover，位移反馈会在点完后粘住，直接关掉 */
+@media (hover: none) {
+  .tab:hover, .fbtn:hover, .chip:hover, .pg:hover:not(:disabled),
+  .opt:hover:not(:disabled), .go:hover {
+    transform: none;
+    box-shadow: var(--shadow-sm);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

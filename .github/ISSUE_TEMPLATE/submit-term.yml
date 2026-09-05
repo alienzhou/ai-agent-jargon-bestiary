@@ -1,0 +1,24 @@
+name: 投词
+description: 撞见一个不好懂的 AI 黑话？把词丢过来，顺手贴上原话更好，判断留给收录人
+body:
+  - type: markdown
+    attributes:
+      value: |
+        不用判断这词是不是黑话、值不值得收——那是收录人的事。
+        你只需要丢一个词过来，顺手贴上原话更好。原话别润色，它本身就是证据。
+  - type: input
+    id: term
+    attributes:
+      label: AI 黑话词汇
+      description: AI 会输出的一些特别 AI 味的词语，如「最狠的」「兜住你」
+    validations:
+      required: true
+  - type: textarea
+    id: quote
+    attributes:
+      label: 原话 / 上下文（选填）
+      description: 你当时看到的完整句子，如果有的话，可以粘贴进来。照录，别润色。
+  - type: textarea
+    id: note
+    attributes:
+      label: 吐槽 / 补充（选填）
