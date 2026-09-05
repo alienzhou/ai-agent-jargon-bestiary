@@ -8,7 +8,8 @@
     "build": "node build.mjs",
     "dev": "node dev.mjs",
     "lint": "node scripts/lint-terms.mjs",
-    "new": "node scripts/new-term.mjs"
+    "new": "node scripts/new-term.mjs",
+    "cover": "bash scripts/gen-cover.sh"
   },
   "keywords": [
     "ai-agent",

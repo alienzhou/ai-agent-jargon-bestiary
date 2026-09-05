@@ -102,6 +102,14 @@ const SFX = (() => {
 
   /* ---- 音色表：改这里就是改整个页面的听感 ---- */
   const BANK = {
+    /* 开场分段触发；跳过会取消尚未吃币的计时器，不留下迟到的叮声。 */
+    coinTouch() { hiss(0.025, { filter: 'bandpass', cut: 2200, vol: 0.13 }); },
+    coinAccept() {
+      hiss(0.045, { filter: 'bandpass', cut: 3800, q: 3, vol: 0.3 });
+      hiss(0.04, { filter: 'bandpass', cut: 2600, q: 4, vol: 0.18, at: 0.035 });
+      tone(988, 0.045, { at: 0.025, vol: 0.3 });
+      tone(1319, 0.06, { at: 0.08, vol: 0.3 });
+    },
     /* 投币：金属落进钱箱（两声高频噪声撞击）+ 经典上行双音 */
     coin() {
       hiss(0.05, { filter: 'bandpass', cut: 3800, q: 3, vol: 0.3 });

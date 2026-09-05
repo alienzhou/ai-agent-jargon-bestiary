@@ -153,7 +153,7 @@ function imgData(terms = []) {
   if (!existsSync(dir)) return out;
 
   const MON = { 方法: 'mon-fangfa', 架构: 'mon-jiagou', 能力: 'mon-nengli', 隐喻: 'mon-yinyu', 营销: 'mon-yingxiao', 失效: 'mon-shixiao' };
-  const used = new Set(['mascot-guide', 'boss-jargon', 'scratch-coin']);
+  const used = new Set(['mascot-guide', 'boss-jargon', 'scratch-coin', 'boot-boss', 'boot-guide']);
   for (const t of terms) {
     used.add(`term-${t.slug}`); /* 词条专属立绘 */
     if (MON[t.category]) used.add(MON[t.category]); /* 该分类的兜底怪 */
