@@ -181,13 +181,16 @@ function html(terms, dev, sub = {}) {
     ? ` <a class="coinbtn" href="${attr(target)}" target="_blank" rel="noopener noreferrer"` +
       ` title="${attr(sub.hint || '撞见没登记的词？丢给图鉴')}">＋${sub.label || '投喂'}</a>`
     : '';
-  /* footer 是共创署名位，不是链接堆：主通道给飞书表单，GitHub 只留给要动代码的人 */
+  /* footer 是共创署名位，不是链接堆：主通道给飞书表单，GitHub 只留给要动代码的人。
+     分片各自 nowrap（分隔点由 CSS 挂在片尾），窄屏只在片之间换行，
+     不会把 dist/lexicon.json 劈开、也不会让「·」孤零零站到行首 */
   const ghLink = sub.github
-    ? ` · <a href="${attr(sub.github)}" target="_blank" rel="noopener noreferrer">GitHub</a>`
+    ? `<span><a href="${attr(sub.github)}"` +
+      ` target="_blank" rel="noopener noreferrer">GitHub</a></span>`
     : '';
   const join = target
-    ? `<div class="foot-cta">这本图鉴是大家一起攒的　<a href="${attr(target)}"` +
-      ` target="_blank" rel="noopener noreferrer">丢个词进来 →</a></div>`
+    ? `<div class="foot-cta"><span>你有更多 AI 黑话？</span><a href="${attr(target)}"` +
+      ` target="_blank" rel="noopener noreferrer">提交进来，让大家评评理 →</a></div>`
     : '';
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -203,9 +206,9 @@ ${asset('app.css')}
 <div class="wrap">
 
 <header class="top">
-  <div class="brand">AI 黑话的怪兽图鉴<small><span id="n-total">${terms.length}</span> 只在册</small></div>
+  <button class="brand" id="home" title="回到开头：清空搜/筛，从第一只开始">AI 黑话的怪兽图鉴<small><span id="n-total">${terms.length}</span> 只在册</small></button>
   <button class="fbtn" id="fbtn" aria-expanded="false" aria-controls="ctl">搜/筛<i>▾</i></button>
-  <button class="fbtn sfx" id="sfx" title="音效开关">🔊</button>
+  <button class="fbtn snd" id="snd" title="声音"></button>
   <nav id="tabs" style="display:flex;gap:6px">
     <button class="tab on" data-m="dict">图鉴</button>
     <button class="tab" data-m="quiz">遭遇战</button>
@@ -222,7 +225,7 @@ ${asset('app.css')}
 <main id="files"></main>
 <section id="quiz" hidden></section>
 
-<footer>${join}<div class="foot-meta">数据源 terms/*.md · 结构化 dist/lexicon.json${ghLink}</div></footer>
+<footer>${join}<div class="foot-meta"><span>数据源 terms/*.md</span><span>结构化 dist/lexicon.json</span>${ghLink}</div></footer>
 
 </div>
 <script>

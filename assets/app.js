@@ -237,13 +237,21 @@ $('#fbtn').onclick = () => {
 function initScratch(el) {
   const cv = document.createElement('canvas');
   el.appendChild(cv);
-  const dpr = window.devicePixelRatio || 1;
-  const w = cv.offsetWidth;
-  const h = cv.offsetHeight;
-  cv.width = w * dpr;
-  cv.height = h * dpr;
   const ctx = cv.getContext('2d');
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  /* 位图尺寸随 CSS 尺寸走。手机转屏 / 折叠屏展开会改变容器宽度，
+     位图不跟着重建的话涂层会被拉伸，而 pos() 用的是 CSS 坐标，
+     刮的位置和擦掉的位置会整体偏移——转个屏就刮不准了。 */
+  let w = 0;
+  let h = 0;
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    w = cv.offsetWidth;
+    h = cv.offsetHeight;
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
 
   /* 涂层：银色刮奖票质感 —— 斜纹银底 + 虚线刀模框 + 金币徽章 + 提示字 */
   const coin = IMG['scratch-coin'] ? new Image() : null;
@@ -313,9 +321,28 @@ function initScratch(el) {
   if (coin) coin.onload = paint;
   paint();
 
+  /* 转屏 / 折叠屏展开后重建位图。已经刮开的卡不用管（canvas 已移除），
+     刮了一半的会重新盖上——比留一层错位的涂层强。ResizeObserver 缺失时
+     退到 orientationchange：iOS 15 之前没有 RO 的机型仍能覆盖主要场景。 */
+  let roTimer = 0;
+  const relayout = () => {
+    if (el.classList.contains('open') || !cv.isConnected) return;
+    if (cv.offsetWidth === w && cv.offsetHeight === h) return;
+    clearTimeout(roTimer);
+    roTimer = setTimeout(() => {
+      resize();
+      moves = 0;
+      last = null;
+      paint();
+    }, 120);
+  };
+  if (window.ResizeObserver) new ResizeObserver(relayout).observe(cv);
+  else addEventListener('orientationchange', () => setTimeout(relayout, 260));
+
   let down = false;
   let last = null;
   let moves = 0;
+  let lastTap = 0;
 
   function erase(x, y) {
     ctx.globalCompositeOperation = 'destination-out';
@@ -355,7 +382,12 @@ function initScratch(el) {
   cv.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     down = true;
-    cv.setPointerCapture(e.pointerId);
+    /* 捕获指针：手指划出 canvas 边界后事件仍然回到这里，不然刮到边上就断。
+       部分内核对已释放的 pointerId 会抛 NotFoundError，捕获不到就退化成
+       「只在 canvas 内有效」——功能仍在，不能让它把整个刮卡搞崩 */
+    try {
+      cv.setPointerCapture(e.pointerId);
+    } catch (err) { /* 捕获失败不影响在区域内刮 */ }
     const p = pos(e);
     last = p;
     erase(p.x, p.y);
@@ -375,12 +407,21 @@ function initScratch(el) {
     scratchSfx();
     if (++moves % 7 === 0 && cleared() > 0.5) reveal();
   });
-  cv.addEventListener('pointerup', () => {
+  cv.addEventListener('pointerup', (e) => {
     down = false;
     if (moves > 2 && cleared() > 0.5) reveal();
+    /* 手机上的「双击直接开」：触屏的 dblclick 各内核派发得不一致
+       （有的要求两次点在同一元素同一位置、有的干脆只在鼠标下发），
+       所以自己按 400ms 窗口判一次双击。canvas 已 touch-action:none，
+       不会顺带触发系统的双击缩放 */
+    if (e.pointerType !== 'mouse') {
+      const now = performance.now();
+      if (now - lastTap < 400 && moves <= 2) reveal();
+      lastTap = now;
+    }
   });
   cv.addEventListener('pointercancel', () => { down = false; });
-  cv.addEventListener('dblclick', reveal); /* 没耐心的直接双击 */
+  cv.addEventListener('dblclick', reveal); /* 桌面端：没耐心的直接双击 */
 }
 
 /* ================= 模式 + 路由 ================= */
@@ -401,6 +442,13 @@ $('#tabs').onclick = (e) => {
   SFX.play('swap');
   const t = filtered()[idx];
   location.hash = b.dataset.m === 'quiz' ? '#/quiz' : t ? `#/dict/${t.slug}` : '#/dict';
+};
+
+/* 左上角标题＝重新开机。不是只回图鉴第一只，而是回到投币开场：
+   用无 hash 的当前地址完整重载，路由、搜/筛状态、遭遇战状态和开场遮罩都回到初始值。
+   replace 不留下「回首页前那只怪」的浏览器历史，后退也不会又钻回旧状态。 */
+$('#home').onclick = () => {
+  location.replace(location.pathname + location.search);
 };
 
 function route() {
@@ -588,25 +636,61 @@ function syncTopH() {
 }
 syncTopH();
 addEventListener('resize', syncTopH);
+/* 手机转屏时 resize 可能早于布局稳定就派发（iOS 尤其），量到的是旧高度；
+   orientationchange 后补一次延迟测量。地址栏收起/展开会改视口高度而不改
+   宽度，某些内核不发 resize，visualViewport 能兜住。 */
+addEventListener('orientationchange', () => setTimeout(syncTopH, 300));
+if (window.visualViewport) window.visualViewport.addEventListener('resize', syncTopH);
 
 if (META && META.count != null) $('#n-total').textContent = META.count;
 
-/* 静音开关：有声音就必须有关掉它的地方——办公室里打开这页不该被出卖。
-   状态存 localStorage，下次进来仍然是静音。 */
-(function sfxToggle() {
-  const b = $('#sfx');
+/* 声音开关：一颗键三态循环 —— 全开（音效+BGM）→ 仅音效 → 全静。
+   曾经是并排两颗（🔊 和 ♪），但用户扫一眼只看到「两个管声音的图标」，
+   得逐个 hover 才知道差别。三态把同样的能力压进一个位置，且顺序符合直觉：
+   音乐最先被嫌吵，所以第一下就关它；再点一下才连音效一起闭嘴。
+
+   图标用内联 SVG 而不是 emoji：🔊 在各系统渲染差异极大（有的糊成一团黑），
+   而丝网印风格要的是粗描边线条，emoji 给不了。 */
+(function soundToggle() {
+  const b = $('#snd');
   if (!b) return;
+  /* 喇叭本体 + 三态各自的附加笔画。stroke 全走 currentColor，跟按钮反色联动 */
+  const horn = '<path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>';
+  const ICON = {
+    /* 全开：喇叭 + 两道声波 */
+    all: horn + '<path d="M16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>',
+    /* 仅音效：只剩一道声波，比「全开」弱一档 */
+    sfx: horn + '<path d="M16.5 8.5a5 5 0 010 7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>',
+    /* 全静：打叉 */
+    off: horn + '<path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>',
+  };
+  const TIP = {
+    all: '声音：音效 + 背景音乐（点击关掉音乐）',
+    sfx: '声音：只有音效（点击全部静音）',
+    off: '已静音（点击全部打开）',
+  };
+  const state = () => (!SFX.on ? 'off' : SFX.music ? 'all' : 'sfx');
   const sync = () => {
-    b.textContent = SFX.on ? '🔊' : '🔇';
-    b.classList.toggle('off', !SFX.on);
-    b.setAttribute('aria-label', SFX.on ? '关闭音效' : '开启音效');
-    b.setAttribute('aria-pressed', String(!SFX.on));
+    const s = state();
+    b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${ICON[s]}</svg>`;
+    b.classList.toggle('off', s === 'off');
+    b.classList.toggle('music', s === 'all'); /* 放着音乐时按钮金底轻脉动 */
+    b.title = TIP[s];
+    b.setAttribute('aria-label', TIP[s]);
   };
   b.onclick = () => {
-    SFX.toggle();
+    const s = state();
+    /* 全开 →（关音乐）仅音效 →（关音效）全静 →（都开）全开 */
+    if (s === 'all') SFX.musicToggle();
+    else if (s === 'sfx') SFX.toggle();
+    else {
+      SFX.toggle();
+      if (!SFX.music) SFX.musicToggle();
+    }
     sync();
   };
   sync();
+  window.__syncAudioBtns = sync; /* 开场页选了「配乐」后要回来刷新按钮态 */
 })();
 route();
 
@@ -629,12 +713,27 @@ route();
     `<em class="lit">INSERT COIN</em></div>` +
     `<div class="coin">▶ 点击投币开始 · 已收录 ${TERMS.length} 只</div>` +
     `<div class="ready">CREDIT 1 &nbsp;·&nbsp; PUSH START</div>` +
-    `</div><div class="crt"></div>`;
+    `</div>` +
+    /* BGM 开关放开场页底角：这是唯一能在「第一声响起之前」够到的地方，
+       但它不是主诉求——主诉求是投币。所以做成角落里的一行小字，
+       想关的人找得到，不想管的人不会被它挡住视线。 */
+    `<div class="bgm-ask"><label><input type="checkbox" id="bgm-opt"` +
+    (SFX.music ? ' checked' : '') +
+    `><span class="led"></span><span class="txt">背景音乐</span></label></div>` +
+    `<div class="crt"></div>`;
   document.body.appendChild(el);
   document.body.style.overflow = 'hidden';
 
   let started = false;
+  let startedAt = 0;
   let timers = [];
+  /* 勾选框自己吞掉点击：不然点它会顺带触发「任意交互即投币」，开场直接跑掉 */
+  const optWrap = el.querySelector('.bgm-ask');
+  if (optWrap) {
+    ['click', 'pointerdown', 'touchstart'].forEach((ev) =>
+      optWrap.addEventListener(ev, (e) => e.stopPropagation())
+    );
+  }
   const done = () => {
     timers.forEach(clearTimeout);
     el.classList.add('gone');
@@ -643,10 +742,17 @@ route();
   };
 
   const start = () => {
-    if (started) return done(); /* 二次点击 = 跳过剩余动效 */
+    if (started) return; /* 同一次点击的后续事件（见下）不算「再点一次」 */
     started = true;
+    startedAt = performance.now();
     el.classList.add('inserting');
     SFX.play('coin'); /* 第一声：AudioContext 在这一刻被创建 */
+    /* 用户在开场页勾了配乐 -> 现在落地。BGM 必须搭这趟手势的车启动，
+       否则自动播放策略会把它挂起。 */
+    const opt = el.querySelector('#bgm-opt');
+    if (opt && opt.checked !== SFX.music) SFX.musicToggle();
+    else SFX.musicResume(); /* 上次开着的，这次自动续上 */
+    window.__syncAudioBtns?.();
     /* 减弱动效偏好下，全局 CSS 把动画压到 0.01ms，再等 1.5 秒就是干瞪眼。
        声音留着（那不是动效），画面直接进场。 */
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -661,13 +767,24 @@ route();
     timers.push(setTimeout(done, 1560));
   };
 
+  /* 「再点一下跳过」必须挡住同一次点击的事件级联。
+     一次触屏轻点会依次派发 pointerdown → touchstart → pointerup → touchend → click，
+     每个都命中这里；照字面实现「第二次调用就跳过」的话，touchstart 会立刻
+     把刚开场的动画掀掉——手机上永远看不到投币动效，桌面鼠标反而正常
+     （mousedown/mouseup 不在监听列表里，只有 pointerdown + click 两发）。
+     用时间窗判定：360ms 内的重复事件都属于同一次点击，不算跳过。 */
+  const poke = () => {
+    if (!started) return start();
+    if (performance.now() - startedAt > 360) done();
+  };
+
   ['click', 'pointerdown', 'touchstart'].forEach((ev) =>
-    el.addEventListener(ev, start, { passive: true })
+    el.addEventListener(ev, poke, { passive: true })
   );
-  el.addEventListener('wheel', start, { passive: true });
+  el.addEventListener('wheel', poke, { passive: true });
   document.addEventListener('keydown', function k(e) {
     if (e.key === 'Tab') return; /* 留给键盘用户先看清界面 */
-    start();
+    poke();
     document.removeEventListener('keydown', k);
   });
 })();

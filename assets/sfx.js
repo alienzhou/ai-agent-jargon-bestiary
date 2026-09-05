@@ -10,7 +10,8 @@
    2. 任何一步失败都必须静默降级：没有 Web Audio 的环境，页面照常能玩。 */
 const SFX = (() => {
   let ac = null;
-  let master = null;
+  let master = null; /* 音效总线 */
+  let musicBus = null; /* 音乐总线：和音效分开，才能在音效响起时把 BGM 压下去 */
   let on = true;
   try {
     on = localStorage.getItem('jb-sfx') !== 'off';
@@ -26,6 +27,9 @@ const SFX = (() => {
       master = ac.createGain();
       master.gain.value = 0.28; /* 街机味要够，但不能吓到人 */
       master.connect(ac.destination);
+      musicBus = ac.createGain();
+      musicBus.gain.value = MUSIC_VOL;
+      musicBus.connect(ac.destination);
     } catch (e) {
       ac = null;
     }
@@ -191,12 +195,128 @@ const SFX = (() => {
     },
   };
 
+  /* ================= BGM：attract mode 循环 =================
+     同样零素材，用 setTimeout 调度器一小节一小节现排音符。
+
+     「带感但不干扰」靠三件事，缺一件都会变成噪音：
+     1. 音量只有音效的 1/5（MUSIC_VOL），且全部走三角波——方波当 BGM 十分钟就头疼。
+     2. 音效响起时自动闪避（duck）：BGM 瞬间压到三成再缓慢回升，
+        让「叮」「HIT!」永远压在音乐上面，不会糊成一团。
+     3. 和声极简：Am-F-C-G 四小节无限循环，没有主旋律。
+        有主旋律的曲子会抢注意力，读词条时人会不自觉跟着听。
+
+     调度用 setTimeout 提前一小节排期，而不是给每个音符都挂定时器：
+     浏览器切到后台会节流 timer，提前量能吸收抖动，回到前台不会碎掉。 */
+  const MUSIC_VOL = 0.055;
+  const BPM = 96;
+  const BEAT = 60 / BPM;
+  const BAR = BEAT * 4;
+  /* 四小节走向：[根音, 和弦三音组]。低音进 bass，三音组做分解琶音 */
+  const N = { A2: 110, F2: 87.31, C3: 130.81, G2: 98 };
+  const PROG = [
+    [N.A2, [220, 261.63, 329.63]], /* Am */
+    [N.F2, [174.61, 220, 261.63]], /* F */
+    [N.C3, [196, 261.63, 329.63]], /* C */
+    [N.G2, [196, 246.94, 293.66]], /* G */
+  ];
+
+  /* 默认开：这是台街机，插币就该有背景乐。前提是它已经被压得很轻
+     （MUSIC_VOL 约音效的 1/5）、音效响起会自动 duck、切后台立刻停，
+     而且第一声只可能发生在投币那一下手势里——不存在「一进页面就被吵」。
+     关过一次就记住关（localStorage），不再每次重问。 */
+  let musicOn = true;
+  let musicTimer = null;
+  let bar = 0;
+  try {
+    musicOn = localStorage.getItem('jb-bgm') !== 'off';
+  } catch (e) { /* 存不了就按默认开 */ }
+
+  /* 一个音符：直接挂在 musicBus 上，绕开音效的 master */
+  function mnote(freq, at, dur, vol, type) {
+    const c = ac;
+    if (!c) return;
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = type || 'triangle';
+    o.frequency.setValueAtTime(freq, at);
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(vol, at + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    o.connect(g);
+    g.connect(musicBus);
+    o.start(at);
+    o.stop(at + dur + 0.02);
+  }
+  /* 极轻的 hi-hat：给循环一点推进感，不给它音高 */
+  function mhat(at, vol) {
+    const c = ac;
+    if (!c) return;
+    const s = c.createBufferSource();
+    s.buffer = noise(c);
+    const f = c.createBiquadFilter();
+    f.type = 'highpass';
+    f.frequency.value = 7000;
+    const g = c.createGain();
+    g.gain.setValueAtTime(vol, at);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 0.045);
+    s.connect(f);
+    f.connect(g);
+    g.connect(musicBus);
+    s.start(at);
+    s.stop(at + 0.06);
+  }
+
+  /* 排一小节：低音打 1/3 拍，琶音走八分音符，hi-hat 落在反拍 */
+  function scheduleBar() {
+    if (!ac) return;
+    const [root, chord] = PROG[bar % PROG.length];
+    const t0 = ac.currentTime + 0.06;
+    mnote(root, t0, BEAT * 0.9, 0.5, 'triangle');
+    mnote(root, t0 + BEAT * 2, BEAT * 0.9, 0.42, 'triangle');
+    for (let i = 0; i < 8; i++) {
+      const f = chord[i % chord.length] * (i === 7 ? 2 : 1); /* 末位翻高八度，句尾有个小勾 */
+      mnote(f, t0 + i * BEAT * 0.5, BEAT * 0.42, i % 2 ? 0.12 : 0.2, 'triangle');
+    }
+    for (let i = 0; i < 4; i++) mhat(t0 + i * BEAT + BEAT * 0.5, 0.05);
+    bar++;
+    musicTimer = setTimeout(scheduleBar, BAR * 1000);
+  }
+
+  function musicStart() {
+    if (musicTimer || !musicOn) return;
+    const c = ctx();
+    if (!c) return;
+    if (c.state === 'suspended') c.resume();
+    musicBus.gain.setTargetAtTime(MUSIC_VOL, c.currentTime, 0.6); /* 淡入，别硬切 */
+    scheduleBar();
+  }
+  function musicStop() {
+    clearTimeout(musicTimer);
+    musicTimer = null;
+    if (musicBus && ac) musicBus.gain.setTargetAtTime(0.0001, ac.currentTime, 0.25);
+  }
+  /* 闪避：音效来了先把音乐压下去，再用长时间常数缓慢抬回来 */
+  function duck() {
+    if (!musicTimer || !musicBus || !ac) return;
+    const t = ac.currentTime;
+    musicBus.gain.cancelScheduledValues(t);
+    musicBus.gain.setValueAtTime(MUSIC_VOL * 0.3, t);
+    musicBus.gain.setTargetAtTime(MUSIC_VOL, t + 0.1, 0.35);
+  }
+
+  /* 切到后台就停：没人看的页面不该还在响，也省得 timer 被节流后音符堆积 */
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) musicStop();
+    else if (musicOn && on) musicStart();
+  });
+
   /* 唯一出口。未知音效名静默忽略，调用点写错不炸页面 */
   function play(name, arg) {
     if (!on) return;
     try {
       const c = ctx();
       if (c && c.state === 'suspended') c.resume(); /* 切后台回来会被挂起 */
+      duck();
       BANK[name]?.(arg);
     } catch (e) { /* 音效永远不该阻断主流程 */ }
   }
@@ -206,14 +326,38 @@ const SFX = (() => {
     get on() {
       return on;
     },
-    /* 静音开关：写盘持久化，下次进来还记得 */
+    /* 静音开关：写盘持久化，下次进来还记得。关音效连 BGM 一起停——
+       用户点静音是想让页面闭嘴，不是只关掉一半 */
     toggle() {
       on = !on;
       try {
         localStorage.setItem('jb-sfx', on ? 'on' : 'off');
       } catch (e) { /* 存不了就只在本次会话生效 */ }
-      if (on) play('tick');
+      if (on) {
+        play('tick');
+        if (musicOn) musicStart();
+      } else {
+        musicStop();
+      }
       return on;
+    },
+
+    /* ---- BGM 独立开关：想要音效但不想要音乐，是很常见的诉求 ---- */
+    get music() {
+      return musicOn;
+    },
+    /* 开场投币后调用：BGM 只在用户已经点过头（上次开着）时才自动续上 */
+    musicResume() {
+      if (musicOn && on) musicStart();
+    },
+    musicToggle() {
+      musicOn = !musicOn;
+      try {
+        localStorage.setItem('jb-bgm', musicOn ? 'on' : 'off');
+      } catch (e) { /* 存不了就只在本次会话生效 */ }
+      if (musicOn && on) musicStart();
+      else musicStop();
+      return musicOn;
     },
   };
 })();
