@@ -17,6 +17,14 @@
 
 * { box-sizing: border-box; }
 
+/* 触屏点击时系统会盖一层半透明灰块，和这里的硬阴影 + :active 位移叠在一起
+   像是按坏了。自己已经给了按下反馈，把系统那层关掉。 */
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%; /* iOS 横屏会自作主张放大正文 */
+  text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   background: var(--paper);
@@ -60,6 +68,10 @@ button:focus:not(:focus-visible), summary:focus:not(:focus-visible) { outline: n
   overflow: hidden;
   transition: opacity 0.45s ease, transform 0.45s ease;
   cursor: pointer;
+  /* iOS Safari 上 body{overflow:hidden} 锁不住滚动（橡皮筋照样走），
+     开场页会被手指拖动、露出下面还没准备好的正文。这层自己吃掉手势 */
+  touch-action: none;
+  overscroll-behavior: contain;
 }
 #boot.gone { opacity: 0; transform: scale(1.08); pointer-events: none; }
 #boot .boot-in { position: relative; z-index: 2; }
@@ -184,13 +196,69 @@ button:focus:not(:focus-visible), summary:focus:not(:focus-visible) { outline: n
   100% { opacity: 0; transform: translateY(100%); }
 }
 
-/* 音效开关：顶部条里最轻的一颗。有声音就必须有关掉它的地方 */
-.fbtn.sfx {
-  padding: 6px 9px;
-  font-size: 14px;
-  line-height: 1;
+/* 声音开关：顶部条里最轻的一颗。三态循环，图标是内联 SVG 不是 emoji——
+   emoji 在各系统渲染差异极大，而这里需要和粗描边风格一致的线条 */
+.fbtn.snd {
+  padding: 5px 9px;
+  line-height: 0;
 }
-.fbtn.sfx.off { opacity: 0.45; }
+.fbtn.snd svg { width: 19px; height: 19px; display: block; }
+.fbtn.snd.off { opacity: 0.4; }
+/* 正在放音乐：金底 + 轻脉动，一眼看出声音是从这儿来的 */
+.fbtn.snd.music {
+  background: var(--gold);
+  animation: snd-pulse 2.2s ease-in-out infinite;
+}
+@keyframes snd-pulse { 50% { opacity: 0.66; } }
+
+/* 开场页的 BGM 开关：默认就是开的，所以它不是「征求同意」而是「随手能关」。
+   降级成左下角一行小字——想关的人扫一眼能找到，不想管的人视线不会被它截住。
+   不用原生 checkbox：系统控件的圆角方块和丝网印是两套语言，
+   这里做成街机面板上的指示灯，一枚小金币亮着就是「在放」。 */
+#boot .bgm-ask {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 4;
+  text-align: center;
+}
+#boot .bgm-ask label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: rgba(242, 232, 213, 0.45);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+#boot .bgm-ask input { position: absolute; opacity: 0; pointer-events: none; }
+/* 指示灯：灭的时候是个空槽，亮的时候是枚发光的小金币 */
+#boot .bgm-ask .led {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid rgba(242, 232, 213, 0.45);
+  background: rgba(0, 0, 0, 0.22);
+  transition: 0.18s;
+}
+#boot .bgm-ask label:hover { color: rgba(242, 232, 213, 0.9); }
+/* hover 只在「灯没亮」时改边框：否则 label:hover .led（特异性 0,2,1）
+   会盖掉下面 input:checked + .led（0,2,1，但排在前面），亮灯直接失效 */
+#boot .bgm-ask label:hover input:not(:checked) + .led { border-color: rgba(242, 232, 213, 0.9); }
+#boot .bgm-ask input:checked + .led {
+  /* 用 background-image 而不是 background 简写：简写会连 background-color 一起重置，
+     灭灯态那层 rgba 底色会被抹掉，渐变边缘透出背景 */
+  background-image: radial-gradient(circle at 34% 30%, #f2d873, var(--gold) 62%, #8a6f14);
+  background-color: var(--gold);
+  border-color: var(--gold);
+  box-shadow: 0 0 7px rgba(201, 162, 39, 0.8);
+}
+#boot .bgm-ask input:checked ~ .txt { color: rgba(242, 232, 213, 0.62); }
+#boot .bgm-ask input:focus-visible + .led { outline: 3px solid var(--paper); outline-offset: 2px; }
 
 /* ============ 页面骨架 ============ */
 .wrap {
@@ -215,6 +283,8 @@ button:focus:not(:focus-visible), summary:focus:not(:focus-visible) { outline: n
   background: var(--paper);
   border-bottom: 3px solid var(--line);
 }
+/* 左上角标题即「回到开头」按钮：清空搜/筛并回到第一只。
+   看起来仍是标题（无边框无底色），只在 hover 时给一点位移暗示可点。 */
 .brand {
   font-size: 18px;
   font-weight: 900;
@@ -223,7 +293,18 @@ button:focus:not(:focus-visible), summary:focus:not(:focus-visible) { outline: n
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  padding: 2px 0;
+  cursor: pointer;
+  text-align: left;
+  transition: 0.12s;
 }
+.brand:hover { transform: translate(-1px, -1px); text-decoration: underline wavy 2px var(--gold, currentColor); text-underline-offset: 4px; }
+.brand:active { transform: translate(1px, 1px); }
+.brand:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 .brand small {
   margin-left: 7px;
   font-size: 10.5px;
@@ -500,6 +581,7 @@ button:focus:not(:focus-visible), summary:focus:not(:focus-visible) { outline: n
 /* 刮刮卡：整个「人话」气泡都是刮奖区，canvas 涂层铺满方框，拿硬币刮哪露哪 */
 .scratch:not(.open) {
   user-select: none;
+  -webkit-user-select: none; /* iOS Safari 仍需前缀，否则长按会拉出选择手柄 */
   /* 金币光标：投币进场，金币刮奖 */
   cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><circle cx='15' cy='15' r='12' fill='%23c9a227' stroke='%231a1815' stroke-width='3.5'/><circle cx='15' cy='15' r='5.5' fill='none' stroke='%231a1815' stroke-width='2.5'/></svg>") 15 15, pointer;
 }
@@ -511,6 +593,8 @@ button:focus:not(:focus-visible), summary:focus:not(:focus-visible) { outline: n
   border-radius: 11px;
   z-index: 1;
   touch-action: none; /* 手机上刮的时候别把页面滚走了 */
+  /* iOS 长按图片/canvas 会弹「存储到照片」浮层，正好盖住刚刮开的字 */
+  -webkit-touch-callout: none;
 }
 /* 「人话」标签浮在涂层之上，刮之前就知道这是什么 */
 .bubble .tag { z-index: 2; }
@@ -792,8 +876,14 @@ footer {
   letter-spacing: 0.1em;
   color: var(--dim);
 }
-/* 页尾的共创招呼：翻到底的人最可能动手，这里给一句人话，不是版权栏 */
+/* 页尾的共创招呼：翻到底的人最可能动手，这里给一句人话，不是版权栏。
+   flex + wrap：窄屏只在「问句 / 链接」之间断行，不会把链接自己劈成两段下划线 */
 .foot-cta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 6px 12px;
   margin-bottom: 12px;
   font-size: 13px;
   letter-spacing: 0.02em;
@@ -802,12 +892,25 @@ footer {
 .foot-cta a {
   color: var(--red);
   font-weight: 900;
+  white-space: nowrap;
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-thickness: 2px;
 }
 .foot-cta a:hover { background: var(--gold); color: var(--ink); }
-.foot-meta { opacity: 0.9; }
+/* 署名行分片：整片 nowrap，只在片与片之间换行 */
+.foot-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 2px 7px;
+  opacity: 0.9;
+}
+.foot-meta > span { white-space: nowrap; }
+/* 分隔点挂在片尾伪元素上：独立节点换行后会孤零零挂到行首。
+   flex 下伪元素不参与 gap，所以自带左右空格 */
+.foot-meta > span:not(:last-child)::after { content: ' · '; opacity: 0.6; }
 footer a { color: var(--dim); text-decoration: underline dotted; }
 footer .foot-cta a { color: var(--red); }
 footer a:hover { color: var(--ink); }
@@ -822,6 +925,9 @@ footer a:hover { color: var(--ink); }
   .brand small { display: none; }
   .tab, .fbtn { padding: 7px 11px; font-size: 12px; border-width: 2.5px; }
   .fbtn i { display: none; }
+  /* iOS Safari 会在 focus 小于 16px 的输入框时自动放大整页，且退出焦点后
+     不缩回来——页面从此错位。搜索框在手机上必须 ≥16px。 */
+  #q { font-size: 16px; }
 
   .card { border-width: 3px; border-radius: 15px; box-shadow: var(--shadow-sm); }
   .card .banner { font-size: 10.5px; letter-spacing: 0.06em; padding: 8px 14px; }
@@ -845,14 +951,76 @@ footer a:hover { color: var(--ink); }
   .opt { padding: 12px 13px 12px 44px; font-size: 14.5px; }
   .opt .ltr { left: 10px; top: 11px; }
   .pop { right: 14px; top: 70px; font-size: 34px; }
+
+  /* 署名行是注脚，手机上把字距收紧一档换来单行：
+     折成两行会让「· GitHub」孤零零挂在下面，比小半号字更显眼 */
+  .foot-meta { font-size: 10.5px; letter-spacing: 0.02em; }
 }
 
-/* 触屏没有 hover，位移反馈会在点完后粘住，直接关掉 */
+/* 窄屏（≤520px，手机竖屏 + 小平板分屏都在内）：五个头部元件挤一行会把标题截成
+   「AI 黑话的…」，还会把「＋投喂」顶出视口。flex-wrap 在这里不够用——
+   换行优先于收缩，结果是三行长短不齐。用两行栅格把位置钉死：
+   第一行 标题 + 搜/筛 + 声音 + 投喂，第二行「图鉴/遭遇战」铺满。 */
+@media (max-width: 520px) {
+  .top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    grid-template-areas:
+      "brand fbtn snd coin"
+      "tabs  tabs tabs tabs";
+    align-items: center;
+    row-gap: 7px;
+  }
+  .brand { grid-area: brand; margin-right: 0; }
+  #fbtn { grid-area: fbtn; }
+  #snd { grid-area: snd; }
+  .coinbtn { grid-area: coin; justify-self: end; }
+  #tabs { grid-area: tabs; }
+  #tabs .tab { flex: 1; text-align: center; }
+  /* 搜/筛在遭遇战里会 hidden，栅格位空着不塌，本来也不该塌 */
+}
+
+/* 极窄屏（≤360px）：第一行放不下「标题 + 搜/筛 + 声音 + 投喂」，标题还是会被截。
+   把「＋投喂」下移到第二行右端，与 tabs 同排，换回一个完整的标题 */
+@media (max-width: 360px) {
+  .top {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "brand fbtn snd"
+      "tabs  tabs coin";
+  }
+  /* 第三列被下面更宽的「＋投喂」撑开，声音键会被拉长成一条：贴右对齐 */
+  #snd { justify-self: end; }
+  .coinbtn { margin-left: 6px; }
+}
+
+/* 触屏没有 hover：移动端浏览器会在点击后把 :hover 粘在元素上（「卡住的悬停态」），
+   位移和变色会一直留着，看起来像按钮坏了。凡是 :hover 改了 transform / 背景的
+   都要在这里中和掉——漏一个就会留一个粘住的按钮。 */
 @media (hover: none) {
-  .tab:hover, .fbtn:hover, .chip:hover, .pg:hover:not(:disabled),
-  .opt:hover:not(:disabled), .go:hover {
+  .brand:hover, .tab:hover, .fbtn:hover, .chip:hover, .pg:hover:not(:disabled),
+  .opt:hover:not(:disabled), .go:hover, .coinbtn:hover, .lure-btn:hover {
     transform: none;
     box-shadow: var(--shadow-sm);
+  }
+  /* 变色类：背景/文字色回落到未 hover 的取值 */
+  .brand:hover { text-decoration: none; }
+  .chip:hover:not(.on) { background: transparent; }
+  .lure-btn:hover { background: var(--ink); }
+  .result .lure-btn:hover { background: var(--red); }
+  .foot-cta a:hover { background: none; color: var(--red); }
+  footer a:hover { color: var(--dim); }
+  /* 触屏的可点区域按 Apple 44px / Google 48px 建议给足。
+     顶部条这几颗原本 34~39px，手指按容易蹭到边上不响。 */
+  .fbtn, .tab, .coinbtn { min-height: 44px; }
+  .fbtn, .tab { display: inline-flex; align-items: center; justify-content: center; }
+  .coinbtn { display: inline-flex; align-items: center; }
+  /* 页尾两条链接行高只有 12~22px，撑到 44 会把版式顶开——
+     用负 margin 抵掉多出来的高度，点击区变大而视觉位置不动 */
+  .foot-cta a, .foot-meta a {
+    display: inline-block;
+    padding: 11px 4px;
+    margin: -11px 0;
   }
 }
 

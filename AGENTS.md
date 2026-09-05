@@ -35,7 +35,7 @@ npm run new -- <slug> --term "词" --quote "原话"   # 新建词条骨架
 | 词条**内容**怎么写 | [.agents/skills/collect-term/SKILL.md](.agents/skills/collect-term/SKILL.md) | 收词流程 + 四个判断题（kind / gloss / actually / usage 怎么定） |
 | **素材**风格与管线 | [ART.md](ART.md) | 统一 prompt、四色调色板、命名约定、验收清单 |
 
-`CONTRIBUTING.md` 是给人读的完整版说明；上面三份是干活时按图索骥的。
+`CONTRIBUTING.md` 是给想召唤新怪的访客看的说明；上面三份是维护项目时按图索骥的事实源。
 **规则只应存在于一处**——发现两处描述同一件事就是 bug，去掉一处或让它引用另一处。
 
 ## 收词（最高频任务）
@@ -58,11 +58,34 @@ npm run new -- <slug> --term "词" --quote "原话"   # 新建词条骨架
 - **音效在 `assets/sfx.js`，全部 Web Audio 现场合成，不许引音频文件**——页面零外部请求 + 单文件是硬约束，
   一个 mp3 就能让 `index.html` 涨几百 KB。加新音效只在 `BANK` 里加一条，调用点写 `SFX.play('名字')`。
   音效永远不能阻断主流程：`play()` 整个包在 try/catch 里，没有 Web Audio 的环境照常能玩。
+- **BGM 同样是合成的**（`sfx.js` 底部）：Am-F-C-G 四小节循环，`setTimeout` 提前一小节排期。
+  **默认开**——这是台街机，插币就该有背景乐。它敢默认开是因为三条前提同时成立，
+  少一条就得退回默认关：① 第一声只可能发生在投币那一下手势里，不存在「一进页面就被吵」；
+  ② 走独立的 `musicBus`，音效响起时 `duck()` 把它压到三成再缓升，「叮」才不会被糊掉；
+  ③ 页面切后台必停（`visibilitychange`），否则 timer 被节流后音符会堆积成一坨。
+  关过一次就记住关（`localStorage` 的 `jb-bgm`），不再每次重问。
+  开场页左下角那行小字是「随手能关」的位置，不是征求同意的弹窗——别再把它做大做居中。
+  改编曲改 `PROG` / `scheduleBar()`；音量是 `MUSIC_VOL`（当前 0.055，约为音效的 1/5）。
 - **`AudioContext` 只能诞生在投币那一下**：浏览器自动播放策略要求音频上下文创建于用户手势内。
   开场页是全站第一次手势，把点火点挪走会导致整站静音。
 - **投币开场的时序写死在两处**：`app.css` 的 `#boot` 动画时长 和 `app.js` 里 `boot()` 的
   `setTimeout`（620ms 通电 / 1560ms 退场）。改一处必须改另一处，否则音画对不上。
   另外 reduced-motion 下 CSS 动画被全局压到 0.01ms，`boot()` 里有专门的短路分支——声音留着，画面直接进场。
+- **开场页的「再点一下跳过」必须走时间窗，不能写成「第二次调用就跳过」**：一次触屏轻点会依次
+  派发 `pointerdown → touchstart → pointerup → touchend → click`，其中三个都在监听列表里。
+  按字面实现的话 `touchstart` 会在开场动画启动 1ms 后就把它掀掉——手机上永远看不到投币动效，
+  桌面鼠标反而正常（只有 `pointerdown` + `click` 两发）。现用 360ms 窗口把同一次点击的级联归并。
+- **刮刮卡的 canvas 位图必须随 CSS 尺寸重建**（`initScratch()` 里的 `ResizeObserver` + `relayout()`）。
+  手机转屏 / 折叠屏展开会改容器宽度，位图不跟着走就会被拉伸，而 `pos()` 用的是 CSS 坐标，
+  刮的位置和擦掉的位置会整体错开——转个屏就刮不准了。判据是 `canvas.width / offsetWidth` 恒等于 dpr。
+- **触屏没有 hover，但浏览器会把 `:hover` 粘在点过的元素上**：凡是 `:hover` 改了 `transform` /
+  背景色的规则，都要在 `@media (hover: none)` 里中和掉，漏一个就留一个「看起来按坏了」的按钮。
+  同一个 media 块里还兜着触摸目标尺寸（44px）——顶部条那几颗原本只有 34~39px。
+- **声音开关只有一颗**（顶部条 `#snd`，三态循环：音效+音乐 → 只有音效 → 全静）。曾经拆成两颗
+  （🔊 和 ♪）并排，视觉上像重复图标——要加能力就往这颗的循环里加，别再摆第二颗。
+  图标是内联 SVG 不是 emoji：emoji 跨系统渲染差异太大，压不住粗描边风格。
+- **验证 CSS 效果时别信 `getComputedStyle` 的第一帧**：自动化浏览器里 transition 常常不推进，
+  读到的是过渡起始值（表现为「规则明明匹配却没生效」）。先 `el.style.transition='none'` 再取值。
 - **改了页面逻辑**：把 `scripts/verify-page.js` 整段贴进浏览器 DevTools Console 跑一次，返回 JSON 结论。
   不依赖特定自动化工具——任何能「在页面里执行 JS 并取回返回值」的方式都行。
 
