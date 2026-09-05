@@ -12,6 +12,8 @@ https://vibe-x.fun/jargon/
 
 可以打开 [vibe-x.fun/jargon](https://vibe-x.fun/jargon/) 来 **玩玩图鉴**。包括回味「AI 味」、怪兽展示等等。
 
+[![试玩：答题并解锁怪兽图鉴](https://h23.static.yximgs.com/kcdn/cdn-kcdn112115/manual-upload/ai-jargon.ab357867d455ca54.gif)](https://vibe-x.fun/jargon/)
+
 ## 🪤 召唤怪兽
 
 撞见 AI 黑话？带上它出没时的原话，把它召唤进图鉴：[飞书表单](https://my.feishu.cn/share/base/shrcn6SFjWEfb8FtclBBHIbYnpf)。
