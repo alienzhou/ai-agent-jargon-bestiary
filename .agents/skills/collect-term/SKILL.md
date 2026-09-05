@@ -1,6 +1,6 @@
 ---
 name: collect-term
-description: 往 AI Agent 黑话图鉴里收录一个新词条（terms/*.md）。当用户说「收录这个词」「把这个词加进图鉴」「记一下这个黑话」「新增词条」「collect this term」，或贴出一段 AI 说的话并表示这里面有个词不好懂、想收进来时使用。也负责给已收录的词追加一条出没记录（sightings）。不负责改页面样式、调整立绘风格（那是 ART.md）、或修改构建逻辑。
+description: 往 AI 黑话的怪兽图鉴里收录一个新词条（terms/*.md）。当用户说「收录这个词」「把这个词加进图鉴」「记一下这个黑话」「新增词条」「collect this term」，或贴出一段 AI 说的话并表示这里面有个词不好懂、想收进来时使用。也负责给已收录的词追加一条出没记录（sightings）。不负责改页面样式、调整立绘风格（那是 ART.md）、或修改构建逻辑。
 ---
 
 # 收词 / Collect a Term

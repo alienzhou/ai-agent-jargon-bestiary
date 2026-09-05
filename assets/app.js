@@ -621,7 +621,7 @@ route();
   el.id = 'boot';
   el.innerHTML =
     `<div class="boot-in">` +
-    `<div class="logo">AI Agent 的<br>黑话图鉴</div>` +
+    `<div class="logo">AI 黑话的<br>怪兽图鉴</div>` +
     `<div class="sub">Jargon Bestiary</div>` +
     (IMG['mascot-guide'] ? `<img class="guide" src="${IMG['mascot-guide']}" alt="">` : '') +
     /* 币口是真的投币口：金币动画沿它落下，落点和这个槽对齐 */

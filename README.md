@@ -1,6 +1,6 @@
-# AI Agent 的黑话图鉴 / Jargon Bestiary
+# AI 黑话的怪兽图鉴 / Jargon Bestiary
 
-![AI Agent 的黑话图鉴](assets/cover.png)
+![AI 黑话的怪兽图鉴](assets/cover.png)
 
 > A living bestiary of AI agent jargon — translate the spell, reveal the creature.
 

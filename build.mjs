@@ -129,7 +129,7 @@ export function build({ dev = false } = {}) {
 // 直接运行时才构建；被 import 时由调用方决定时机
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const { count } = build();
-  console.log(`AI Agent 的黑话图鉴：${count} 条 -> dist/lexicon.json + dist/index.html`);
+  console.log(`AI 黑话的怪兽图鉴：${count} 条 -> dist/lexicon.json + dist/index.html`);
 }
 
 // --- template ---
@@ -194,7 +194,7 @@ function html(terms, dev, sub = {}) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AI Agent 的黑话图鉴</title>
+<title>AI 黑话的怪兽图鉴</title>
 <style>
 ${asset('app.css')}
 </style>
@@ -203,7 +203,7 @@ ${asset('app.css')}
 <div class="wrap">
 
 <header class="top">
-  <div class="brand">AI Agent 的黑话图鉴<small><span id="n-total">${terms.length}</span> 只在册</small></div>
+  <div class="brand">AI 黑话的怪兽图鉴<small><span id="n-total">${terms.length}</span> 只在册</small></div>
   <button class="fbtn" id="fbtn" aria-expanded="false" aria-controls="ctl">搜/筛<i>▾</i></button>
   <button class="fbtn sfx" id="sfx" title="音效开关">🔊</button>
   <nav id="tabs" style="display:flex;gap:6px">

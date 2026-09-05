@@ -7,7 +7,7 @@
 
 ## 这是什么项目
 
-AI Agent 黑话图鉴：一词一卡，说明这词的人话翻译是什么、它其实是什么、在哪撞见的。
+AI 黑话的怪兽图鉴：一词一卡，说明这词的人话翻译是什么、它其实是什么、在哪撞见的。
 `terms/*.md`（纯 YAML frontmatter）是唯一数据源，构建出 `dist/lexicon.json`（对外数据契约）
 和 `dist/index.html`（单文件页面，素材 base64 内联，零外部请求）。
 
@@ -55,6 +55,14 @@ npm run new -- <slug> --term "词" --quote "原话"   # 新建词条骨架
 - **`build.mjs` 的 `imgData()` 只内联当前词条用得到的图**，口径与 `app.js` 的 `monImg()` 三级降级
   （`term-{slug}` → `mon-{分类}` → `boss-jargon`）严格对齐。改一边必须改另一边，否则单文件白涨几百 KB 或图裂。
 - **改了 `build.mjs` 模板 dev server 不生效**：`dev.mjs` 用 ESM import 缓存了模块，必须重启进程。
+- **音效在 `assets/sfx.js`，全部 Web Audio 现场合成，不许引音频文件**——页面零外部请求 + 单文件是硬约束，
+  一个 mp3 就能让 `index.html` 涨几百 KB。加新音效只在 `BANK` 里加一条，调用点写 `SFX.play('名字')`。
+  音效永远不能阻断主流程：`play()` 整个包在 try/catch 里，没有 Web Audio 的环境照常能玩。
+- **`AudioContext` 只能诞生在投币那一下**：浏览器自动播放策略要求音频上下文创建于用户手势内。
+  开场页是全站第一次手势，把点火点挪走会导致整站静音。
+- **投币开场的时序写死在两处**：`app.css` 的 `#boot` 动画时长 和 `app.js` 里 `boot()` 的
+  `setTimeout`（620ms 通电 / 1560ms 退场）。改一处必须改另一处，否则音画对不上。
+  另外 reduced-motion 下 CSS 动画被全局压到 0.01ms，`boot()` 里有专门的短路分支——声音留着，画面直接进场。
 - **改了页面逻辑**：把 `scripts/verify-page.js` 整段贴进浏览器 DevTools Console 跑一次，返回 JSON 结论。
   不依赖特定自动化工具——任何能「在页面里执行 JS 并取回返回值」的方式都行。
 

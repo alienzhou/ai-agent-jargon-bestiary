@@ -82,7 +82,7 @@ server.listen(port, '0.0.0.0', () => {
     .flat()
     .filter((i) => i.family === 'IPv4' && !i.internal)
     .map((i) => i.address);
-  console.log(`AI Agent 的黑话图鉴 dev server:`);
+  console.log(`AI 黑话的怪兽图鉴 dev server:`);
   console.log(`  http://localhost:${port}`);
   for (const ip of ips) console.log(`  http://${ip}:${port}`);
   console.log(`监听 terms/ 变更，改完存盘浏览器自动刷新`);
