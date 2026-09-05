@@ -35,7 +35,7 @@ npm run new -- <slug> --term "词" --quote "原话"   # 新建词条骨架
 | 词条**内容**怎么写 | [.agents/skills/collect-term/SKILL.md](.agents/skills/collect-term/SKILL.md) | 收词流程 + 四个判断题（kind / gloss / actually / usage 怎么定） |
 | **素材**风格与管线 | [ART.md](ART.md) | 统一 prompt、四色调色板、命名约定、验收清单 |
 
-`CONTRIBUTING.md` 是给人读的完整版说明；上面三份是干活时按图索骥的。
+`CONTRIBUTING.md` 是给想召唤新怪的访客看的说明；上面三份是维护项目时按图索骥的事实源。
 **规则只应存在于一处**——发现两处描述同一件事就是 bug，去掉一处或让它引用另一处。
 
 ## 收词（最高频任务）
