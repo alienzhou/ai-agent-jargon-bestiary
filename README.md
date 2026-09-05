@@ -4,6 +4,8 @@
 
 > A living bestiary of AI agent jargon — translate the spell, reveal the creature.
 
+https://vibe-x.fun/jargon/
+
 现在用 AI 动不动就是「最狠的判断」「我找到三种方式来兜住你」「不绕弯子的说」…… AI 味直冲屏幕。这个项目就是把这些词收集回来做成图鉴。
 
 ## 🎮 图一乐
