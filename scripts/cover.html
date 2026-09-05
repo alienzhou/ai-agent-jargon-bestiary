@@ -1,0 +1,182 @@
+<!doctype html>
+<!-- 封面海报源文件：1280×640，用页面同一套设计令牌拼版。
+     改完用浏览器截图 #cover 元素，存成 assets/cover.png。 -->
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>cover</title>
+<style>
+  :root {
+    --paper: #f2e8d5; --card: #fffaf0; --ink: #1a1815;
+    --red: #b4342c; --gold: #c9a227; --blue: #2f5d7c; --dim: #7b7263;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #555; display: grid; place-items: center; min-height: 100vh; }
+
+  #cover {
+    position: relative;
+    width: 1280px; height: 640px;
+    background: var(--paper);
+    color: var(--ink);
+    overflow: hidden;
+    font: 16px/1.6 system-ui, -apple-system, 'PingFang SC', 'Noto Sans CJK SC', sans-serif;
+  }
+  /* 丝网印半调网点：全图唯一纹理 */
+  #cover::before {
+    content: ''; position: absolute; inset: 0; z-index: 0;
+    background-image: radial-gradient(var(--ink) 1.1px, transparent 1.3px);
+    background-size: 8px 8px; opacity: .08;
+  }
+  /* 右侧红色斜带，把主怪托起来 */
+  #cover::after {
+    content: ''; position: absolute; z-index: 0;
+    top: -140px; right: -220px; width: 760px; height: 920px;
+    background: repeating-linear-gradient(-45deg, rgba(180,52,44,.13) 0 16px, transparent 16px 32px);
+    transform: rotate(-12deg);
+  }
+
+  .in { position: relative; z-index: 2; height: 100%; display: flex; align-items: center; padding: 0 60px; gap: 34px; }
+
+  /* ---- 左：文案 ---- */
+  .txt { width: 660px; flex: none; }
+  .kick {
+    display: inline-block; padding: 6px 16px; margin-bottom: 20px;
+    background: var(--ink); color: var(--paper);
+    border-radius: 999px; font-size: 13px; font-weight: 900; letter-spacing: .22em;
+  }
+  h1 { margin: 0; font-size: 78px; font-weight: 900; line-height: 1.04; letter-spacing: .01em; }
+  h1 em { font-style: normal; color: var(--red); text-shadow: 5px 5px 0 var(--ink); }
+  .en {
+    margin-top: 14px; font-size: 15px; font-weight: 800;
+    letter-spacing: .3em; color: var(--dim); text-transform: uppercase;
+  }
+  .say {
+    position: relative; margin-top: 30px; padding: 22px 22px 16px;
+    background: var(--card); border: 4px solid var(--ink); border-radius: 16px;
+    box-shadow: 7px 7px 0 var(--ink);
+    font-size: 25px; font-weight: 800; line-height: 1.5;
+  }
+  .say .tag {
+    position: absolute; top: -16px; left: 18px;
+    padding: 3px 13px; background: var(--ink); color: var(--paper);
+    border: 3px solid var(--ink); border-radius: 999px;
+    font-size: 12.5px; font-weight: 900; letter-spacing: .14em;
+  }
+  .say .hl {
+    background: linear-gradient(rgba(201,162,39,.4), rgba(201,162,39,.4));
+    box-shadow: inset 0 -4px 0 var(--red); font-weight: 900; padding: 0 3px; border-radius: 3px;
+  }
+  .say .yi {
+    margin-top: 12px; padding-top: 11px;
+    border-top: 2px dashed rgba(26,24,21,.25);
+    font-size: 17px; font-weight: 700; color: var(--dim);
+  }
+  .say .yi::before { content: '译 → '; color: var(--red); font-weight: 900; }
+
+  .badges { display: flex; gap: 9px; margin-top: 26px; }
+  .badges span {
+    padding: 5px 15px; border: 3px solid var(--ink); border-radius: 999px;
+    font-size: 13.5px; font-weight: 800; letter-spacing: .08em; background: transparent;
+  }
+  .badges .on { background: var(--gold); box-shadow: 4px 4px 0 var(--ink); }
+
+  /* ---- 右：主怪卡牌 + 两张压角小卡 ---- */
+  .art { position: relative; flex: 1; height: 100%; }
+
+  /* 主怪装进一张真卡牌：编号条 + 粗描边 + 硬阴影，图片边缘不再是裸矩形 */
+  .bigcard {
+    position: absolute; z-index: 2;
+    left: 62px; top: 40px; width: 270px;
+    transform: rotate(3deg);
+    background: var(--card);
+    border: 5px solid var(--ink); border-radius: 20px;
+    box-shadow: 10px 11px 0 var(--ink);
+    overflow: hidden;
+  }
+  .bigcard .bar {
+    display: flex; align-items: center;
+    padding: 9px 16px; background: var(--ink); color: var(--paper);
+    font-size: 12px; font-weight: 900; letter-spacing: .16em;
+  }
+  .bigcard .bar .rare { margin-left: auto; color: var(--gold); }
+  .bigcard img { display: block; width: 100%; }
+  .bigcard .nm {
+    padding: 10px 16px 13px; text-align: center;
+    border-top: 3px dashed var(--ink);
+    font-size: 27px; font-weight: 900; letter-spacing: .04em;
+  }
+
+  /* 压角小卡：叠出「一叠卡牌」的层次 */
+  .mini {
+    position: absolute; z-index: 4; width: 138px;
+    background: var(--card);
+    border: 4px solid var(--ink); border-radius: 14px;
+    box-shadow: 6px 7px 0 var(--ink);
+    overflow: hidden;
+  }
+  .mini img { display: block; width: 100%; }
+  .mini i {
+    display: block; padding: 5px 0 7px; text-align: center;
+    border-top: 2.5px dashed var(--ink);
+    font-style: normal; font-size: 15px; font-weight: 900;
+  }
+  .mini.a { left: 4px; bottom: 118px; transform: rotate(-9deg); }
+  .mini.b { right: 8px; top: 300px; transform: rotate(8deg); }
+
+  /* ---- 底：黑话跑马灯 ---- */
+  .strip {
+    position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; height: 54px;
+    background: var(--ink); color: var(--paper);
+    display: flex; align-items: center; gap: 22px; padding: 0 60px;
+    font-size: 15px; font-weight: 800; letter-spacing: .16em;
+    border-top: 4px solid var(--ink);
+  }
+  .strip b { color: var(--gold); }
+  .strip .sep { opacity: .35; }
+  .strip .right { margin-left: auto; color: var(--gold); letter-spacing: .1em; }
+</style>
+
+<div id="cover">
+  <div class="in">
+    <div class="txt">
+      <span class="kick">INSERT COIN · 投币启动</span>
+      <h1>AI Agent 的<br><em>黑话图鉴</em></h1>
+      <div class="en">Jargon Bestiary</div>
+
+      <div class="say">
+        <span class="tag">原话照录</span>
+        我们要通过这套能力<span class="hl">赋能</span>业务，打通最小闭环。
+        <div class="yi">我们要让业务用上这个东西。</div>
+      </div>
+
+      <div class="badges">
+        <span class="on">方法</span><span>架构</span><span class="on">能力</span>
+        <span>隐喻</span><span class="on">营销</span><span>失效</span>
+      </div>
+    </div>
+
+    <div class="art">
+      <div class="bigcard">
+        <div class="bar"><span>NO.001</span><span class="rare">★★★★★</span></div>
+        <img src="../assets/img/opt/boss-jargon.webp" alt="">
+        <div class="nm">黑话本话</div>
+      </div>
+      <div class="mini a">
+        <img src="../assets/img/opt/term-funeng.webp" alt=""><i>赋能</i>
+      </div>
+      <div class="mini b">
+        <img src="../assets/img/opt/term-taizhang.webp" alt=""><i>台账</i>
+      </div>
+    </div>
+  </div>
+
+  <div class="strip">
+    <span>赋能</span><span class="sep">/</span>
+    <span>对齐</span><span class="sep">/</span>
+    <span>上下文工程</span><span class="sep">/</span>
+    <span>最小闭环</span><span class="sep">/</span>
+    <span>台账</span><span class="sep">/</span>
+    <span>抓手</span>
+    <span class="right">图鉴 + 遭遇战 · 单文件零依赖</span>
+  </div>
+</div>
+</html>

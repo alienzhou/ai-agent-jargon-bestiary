@@ -5,7 +5,7 @@
  * 数据契约见 dist/lexicon.json 的 schema 字段。词条为纯字段结构，
  * 不含 HTML，便于外部自行解析渲染。
  */
-import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname, basename, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import yaml from 'js-yaml';
@@ -137,8 +137,12 @@ function asset(name) {
   return readFileSync(join(assetsDir, name), 'utf8');
 }
 
-/* AI 生成素材：assets/img/opt/*.{webp,avif} -> base64 内联，保持 dist 单文件自包含。
-   同名多格式时取体积最小者。缺图不阻塞构建，模板/脚本各自兜底。
+/* AI 生成素材：assets/img/opt/*.webp -> base64 内联，保持 dist 单文件自包含。
+   缺图不阻塞构建，模板/脚本各自兜底。
+
+   只留 webp 一种格式：Chrome 23+ / Safari 14+ / Firefox 65+ 全支持，
+   现代浏览器不存在需要兜底的场景。曾经同时存 avif 再取体积小的那个，
+   收益只有百来 KB，代价是每张图两份文件、仓库多一倍素材、还得维护挑选逻辑。
 
    只内联「当前词条真的会用到」的那些：每张图 20–46KB 且是 base64，
    把弃用分类怪和历史素材一起塞进去会让 index.html 白涨几百 KB。
@@ -156,16 +160,11 @@ function imgData(terms = []) {
   }
 
   for (const f of readdirSync(dir)) {
-    const m = f.match(/^([a-z0-9-]+)\.(webp|avif)$/);
+    const m = f.match(/^([a-z0-9-]+)\.webp$/);
     if (!m || !used.has(m[1])) continue;
-    const p = join(dir, f);
-    if (out[m[1]] && out[m[1]].size <= statSync(p).size) continue;
-    out[m[1]] = {
-      size: statSync(p).size,
-      uri: `data:image/${m[2]};base64,${readFileSync(p).toString('base64')}`,
-    };
+    out[m[1]] = `data:image/webp;base64,${readFileSync(join(dir, f)).toString('base64')}`;
   }
-  return Object.fromEntries(Object.entries(out).map(([k, v]) => [k, v.uri]));
+  return out;
 }
 
 /* 属性值转义：链接来自 submit.config.json，进模板前过一道 */
@@ -179,11 +178,16 @@ function html(terms, dev, sub = {}) {
   /* 投词入口：主通道优先，兜底 GitHub；都空不渲染。新标签打开，不抢单页路由 */
   const target = sub.url || sub.github || '';
   const coin = target
-    ? ` <a class="fbtn coinbtn" href="${attr(target)}" target="_blank" rel="noopener noreferrer"` +
-      ` title="${attr(sub.hint || '撞见没登记的词？投喂它')}">${sub.label || '投喂'}</a>`
+    ? ` <a class="coinbtn" href="${attr(target)}" target="_blank" rel="noopener noreferrer"` +
+      ` title="${attr(sub.hint || '撞见没登记的词？丢给图鉴')}">＋${sub.label || '投喂'}</a>`
     : '';
+  /* footer 是共创署名位，不是链接堆：主通道给飞书表单，GitHub 只留给要动代码的人 */
   const ghLink = sub.github
-    ? ` · <a href="${attr(sub.github)}" target="_blank" rel="noopener noreferrer">GitHub 递词</a>`
+    ? ` · <a href="${attr(sub.github)}" target="_blank" rel="noopener noreferrer">GitHub</a>`
+    : '';
+  const join = target
+    ? `<div class="foot-cta">这本图鉴是大家一起攒的　<a href="${attr(target)}"` +
+      ` target="_blank" rel="noopener noreferrer">丢个词进来 →</a></div>`
     : '';
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -201,6 +205,7 @@ ${asset('app.css')}
 <header class="top">
   <div class="brand">AI Agent 的黑话图鉴<small><span id="n-total">${terms.length}</span> 只在册</small></div>
   <button class="fbtn" id="fbtn" aria-expanded="false" aria-controls="ctl">搜/筛<i>▾</i></button>
+  <button class="fbtn sfx" id="sfx" title="音效开关">🔊</button>
   <nav id="tabs" style="display:flex;gap:6px">
     <button class="tab on" data-m="dict">图鉴</button>
     <button class="tab" data-m="quiz">遭遇战</button>
@@ -217,7 +222,7 @@ ${asset('app.css')}
 <main id="files"></main>
 <section id="quiz" hidden></section>
 
-<footer>数据源 terms/*.md · 结构化 dist/lexicon.json${ghLink}</footer>
+<footer>${join}<div class="foot-meta">数据源 terms/*.md · 结构化 dist/lexicon.json${ghLink}</div></footer>
 
 </div>
 <script>
@@ -225,6 +230,7 @@ const TERMS = ${JSON.stringify(terms)};
 const META = ${JSON.stringify(meta)};
 const IMGS = ${JSON.stringify(imgs)};
 const SUBMIT = ${JSON.stringify({ url: sub.url || '', github: sub.github || '' })};
+${asset('sfx.js')}
 ${asset('app.js')}
 </script>
 ${dev ? liveReload() : ''}

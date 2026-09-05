@@ -45,7 +45,9 @@ button:focus-visible, summary:focus-visible, input:focus-visible, a:focus-visibl
 }
 button:focus:not(:focus-visible), summary:focus:not(:focus-visible) { outline: none; }
 
-/* ============ 开场：投币启动 ============ */
+/* ============ 开场：投币启动 ============
+   四拍：待机闪烁 → 金币落进币口 → CRT 通电（扫描线扫过 + 内容轻抖）→ 整屏退场。
+   时序写死在这里，app.js 的 boot() 按同样的毫秒数触发音效——改一边必须改另一边。 */
 #boot {
   position: fixed;
   inset: 0;
@@ -55,10 +57,12 @@ button:focus:not(:focus-visible), summary:focus:not(:focus-visible) { outline: n
   place-items: center;
   text-align: center;
   color: var(--paper);
+  overflow: hidden;
   transition: opacity 0.45s ease, transform 0.45s ease;
   cursor: pointer;
 }
 #boot.gone { opacity: 0; transform: scale(1.08); pointer-events: none; }
+#boot .boot-in { position: relative; z-index: 2; }
 #boot .logo {
   font-size: clamp(38px, 11vw, 78px);
   font-weight: 900;
@@ -73,15 +77,120 @@ button:focus:not(:focus-visible), summary:focus:not(:focus-visible) { outline: n
   opacity: 0.85;
   text-transform: uppercase;
 }
-#boot .guide { width: min(190px, 44vw); margin: 26px auto 0; display: block; }
+#boot .guide { width: min(175px, 40vw); margin: 20px auto 0; display: block; }
 #boot .coin {
-  margin-top: 26px;
+  margin-top: 22px;
   font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.24em;
   animation: blink 1s steps(2) infinite;
 }
 @keyframes blink { 50% { opacity: 0.15; } }
+
+/* 投币口：一条黑槽 + 槽口高光。金币动画沿它落下，落点对准槽心 */
+#boot .slot {
+  position: relative;
+  width: 132px;
+  margin: 40px auto 0; /* 留出金币待机悬停的高度，别压到吉祥物身上 */
+  height: 34px;
+}
+#boot .slot .mouth {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  width: 46px;
+  height: 9px;
+  margin-left: -23px;
+  border-radius: 3px;
+  background: var(--ink);
+  box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.6), 0 2px 0 rgba(242, 232, 213, 0.35);
+}
+#boot .slot .lit {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0.28em;
+  opacity: 0.55;
+}
+/* 金币：CSS 画的硬币，默认悬在槽口上方待机浮动 */
+#boot .coin-fly {
+  position: absolute;
+  left: 50%;
+  top: -26px;
+  width: 26px;
+  height: 26px;
+  margin-left: -13px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #f2d873, var(--gold) 62%, #8a6f14);
+  border: 2.5px solid var(--ink);
+  animation: coin-idle 1.6s ease-in-out infinite;
+}
+@keyframes coin-idle {
+  50% { transform: translateY(-6px) rotate(8deg); }
+}
+/* 投币瞬间：金币旋转下坠，穿过槽口后消失；币口被撞得一沉 */
+#boot.inserting .coin-fly {
+  animation: coin-drop 0.5s cubic-bezier(0.5, 0, 0.85, 0.4) forwards;
+}
+@keyframes coin-drop {
+  0% { transform: translateY(0) rotateY(0deg); opacity: 1; }
+  70% { transform: translateY(42px) rotateY(540deg) scaleX(0.35); opacity: 1; }
+  100% { transform: translateY(52px) rotateY(720deg) scaleX(0.1); opacity: 0; }
+}
+#boot.inserting .slot { animation: slot-knock 0.22s ease-out 0.42s; }
+@keyframes slot-knock {
+  50% { transform: translateY(3px); }
+}
+/* 投币后待机提示换成 CREDIT 行：告诉你币吃进去了 */
+#boot .ready {
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  color: var(--gold);
+  opacity: 0;
+}
+#boot.inserting .coin { animation: none; opacity: 0; transition: opacity 0.15s; }
+#boot.inserting .ready { animation: credit 0.9s steps(2) 0.5s 3; }
+@keyframes credit { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+
+/* 通电：整块内容被电流抖一下 + 一记白闪，然后 CRT 扫描线扫过全屏 */
+#boot.powered .boot-in { animation: power-jolt 0.42s ease-out; }
+@keyframes power-jolt {
+  0% { transform: scale(1); filter: brightness(1); }
+  18% { transform: scale(1.06) translateX(-3px); filter: brightness(2.6) contrast(1.4); }
+  34% { transform: scale(0.99) translateX(3px); filter: brightness(0.8); }
+  60% { transform: scale(1.02); filter: brightness(1.5); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+#boot .crt {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    linear-gradient(rgba(242, 232, 213, 0.9), rgba(242, 232, 213, 0) 14%),
+    repeating-linear-gradient(rgba(0, 0, 0, 0.16) 0 2px, transparent 2px 4px);
+}
+#boot.powered .crt { animation: crt-sweep 0.72s ease-out; }
+@keyframes crt-sweep {
+  0% { opacity: 0.95; transform: translateY(-100%); }
+  70% { opacity: 0.5; }
+  100% { opacity: 0; transform: translateY(100%); }
+}
+
+/* 音效开关：顶部条里最轻的一颗。有声音就必须有关掉它的地方 */
+.fbtn.sfx {
+  padding: 6px 9px;
+  font-size: 14px;
+  line-height: 1;
+}
+.fbtn.sfx.off { opacity: 0.45; }
 
 /* ============ 页面骨架 ============ */
 .wrap {
@@ -142,8 +251,37 @@ button:focus:not(:focus-visible), summary:focus:not(:focus-visible) { outline: n
 .fbtn.act { background: var(--gold); }
 .fbtn.open { background: var(--ink); color: var(--paper); }
 .fbtn i { font-style: normal; opacity: 0.55; margin-left: 4px; font-size: 11px; }
-/* 投词：常驻 header 的金币按钮，新标签打开收集表单，不掺单页路由 */
-.coinbtn { display: inline-block; background: var(--gold); text-decoration: none; }
+/* 投喂：header 里唯一的红键。图鉴靠人投喂才长大，这个入口就不能跟「搜/筛」一个分量——
+   红底 + 白字 + 慢呼吸，扫一眼就知道这里能动手 */
+.coinbtn {
+  display: inline-block;
+  padding: 7px 15px;
+  border: 3px solid var(--line);
+  border-radius: 999px;
+  background: var(--red);
+  color: var(--paper);
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+  transition: 0.12s;
+  animation: coinpulse 2.6s ease-in-out infinite;
+}
+.coinbtn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 var(--ink);
+  animation: none;
+}
+.coinbtn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); animation: none; }
+@keyframes coinpulse {
+  0%, 88%, 100% { box-shadow: var(--shadow-sm); }
+  94% { box-shadow: 4px 4px 0 var(--ink), 0 0 0 5px rgba(180, 52, 44, 0.22); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .coinbtn { animation: none; }
+}
 
 /* 搜索 + 筛选：折叠面板，默认不占位 */
 .ctl { margin-bottom: 0; }
@@ -476,7 +614,27 @@ button:focus:not(:focus-visible), summary:focus:not(:focus-visible) { outline: n
 }
 .lure-t { font-size: 17px; font-weight: 900; letter-spacing: 0.05em; }
 .lure-d { margin-top: 6px; font-size: 12.5px; font-weight: 700; line-height: 1.6; opacity: 0.78; }
-.lure .cta { margin-top: 11px; font-size: 14px; }
+/* 收编按钮：投喂卡和战绩页共用。实心黑键，跟周围的虚线链接拉开等级 */
+.lure-btn {
+  display: inline-block;
+  margin-top: 13px;
+  padding: 10px 20px;
+  border: 3px solid var(--line);
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+  transition: 0.12s;
+}
+.lure-btn:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--ink); background: var(--red); }
+.lure-btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
+/* 战绩页底色是奶白卡，红键更跳 */
+.result .lure-btn { background: var(--red); }
+.result .lure-btn:hover { background: var(--ink); }
 
 /* ============ 遭遇战 ============ */
 .field {
@@ -634,20 +792,25 @@ footer {
   letter-spacing: 0.1em;
   color: var(--dim);
 }
-footer a { color: var(--dim); text-decoration: underline dotted; }
-footer a:hover { color: var(--ink); }
-
-/* 遭遇战结算：投词 CTA，一条安静的收编链接 */
-.cta {
-  display: inline-block;
-  margin-top: 13px;
+/* 页尾的共创招呼：翻到底的人最可能动手，这里给一句人话，不是版权栏 */
+.foot-cta {
+  margin-bottom: 12px;
   font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: var(--red);
-  text-decoration: underline dotted;
+  letter-spacing: 0.02em;
+  color: var(--ink);
 }
-.cta:hover { color: var(--ink); }
+.foot-cta a {
+  color: var(--red);
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 2px;
+}
+.foot-cta a:hover { background: var(--gold); color: var(--ink); }
+.foot-meta { opacity: 0.9; }
+footer a { color: var(--dim); text-decoration: underline dotted; }
+footer .foot-cta a { color: var(--red); }
+footer a:hover { color: var(--ink); }
 
 /* ============ 移动端 H5 ============ */
 @media (max-width: 560px) {

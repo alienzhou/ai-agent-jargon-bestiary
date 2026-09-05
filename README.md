@@ -1,5 +1,7 @@
 # AI Agent 的黑话图鉴 / Jargon Bestiary
 
+![AI Agent 的黑话图鉴](assets/cover.png)
+
 > A living bestiary of AI agent jargon — translate the spell, reveal the creature.
 
 「赋能」「对齐」「上下文工程」——AI 说的每个字你都认识，连起来就得想一下。你让它说人话，它态度很好，道歉，下一句照旧。

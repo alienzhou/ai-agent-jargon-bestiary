@@ -89,4 +89,6 @@ sightings:                       # 出没记录：在哪撞见的
 ## 用 AI 助手改这个项目
 
 [AGENTS.md](AGENTS.md) 是给 AI 编码助手的项目须知（通用 `AGENTS.md` 约定，不绑定特定产品），
-[.agent/COLLECT.md](.agent/COLLECT.md) 是收词流程手册。让助手先读这两份，产出会稳很多。
+[.agents/skills/collect-term/SKILL.md](.agents/skills/collect-term/SKILL.md) 是收词流程手册。
+后者同时是一份 skill：支持 `.agents/skills/` 约定的助手里，直接说「收录这个词」就会按它走完整流程；
+不支持的助手让它先读这两份文件即可，产出会稳很多。

@@ -181,9 +181,8 @@ export function lintTerm(file, { checkArt = true } = {}) {
 
   // ── 专属立绘 ────────────────────────────────────────────────
   if (checkArt) {
-    const hasArt = ['webp', 'avif'].some((ext) => existsSync(join(optDir, `term-${slug}.${ext}`)));
-    if (!hasArt) {
-      W(`没有专属立绘 assets/img/opt/term-${slug}.{webp,avif}，页面会降级用分类通用怪`);
+    if (!existsSync(join(optDir, `term-${slug}.webp`))) {
+      W(`没有专属立绘 assets/img/opt/term-${slug}.webp，页面会降级用分类通用怪`);
     }
   }
 

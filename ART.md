@@ -92,22 +92,25 @@ scripts/gen-art.sh <name> "<主体描述>"        # 分类怪 / 功能素材
 
 scripts/opt-art.sh <name>                    # 实为 scripts/opt-art.py 的兼容入口
   → 长边缩到 440px                            # 卡面横排头图实际显示 88–124px，留足倍率
-  → webp(q82) + avif(q60)
-  → assets/img/opt/<name>.{webp,avif}
+  → webp(q75)                                 # 实测 q75 vs q82 在 440px 下目检无差，省 22%
+  → assets/img/opt/<name>.webp
 
 node build.mjs
-  → imgData() base64 内联（同名多格式取体积小的那个）
+  → imgData() base64 内联
   → dist/index.html                          # 仍是单文件，零外部请求
 ```
 
-三个注意点：
+四个注意点：
 
 - **本仓库不绑定任何文生图服务。** `gen-art.sh` 只负责把 `scripts/style.txt` 和你的主体描述
   拼成完整 prompt，出图交给谁由环境变量 `JARGON_IMAGE_CMD` 决定（见下一节）。
   不设这个变量就走手动模式：脚本把 prompt 打出来，你贴进任意文生图产品，按提示的路径存盘即可。
+- **只产出 webp 一种格式。** Chrome 23+ / Safari 14+ / Firefox 65+ 全支持，
+  这本图鉴要发给别人双击就玩，没有需要兜底的现代浏览器。曾经同时产 avif、构建时挑体积小的那个，
+  省下的百来 KB 不值得每张图两份文件、仓库素材翻倍、外加一套挑选逻辑。
 - **压缩不依赖外部工具。** `scripts/opt-art.py` 用 PEP 723 内联依赖声明自带 pillow，靠 `uv run` 拉起，
   不污染系统环境。`opt-art.sh` 是薄壳，旧命令照跑。
-- **`imgData()` 只内联「当前词条用得到」的图。** 每张 base64 是 20–46KB，
+- **`imgData()` 只内联「当前词条用得到」的图。** 每张 base64 后 25–50KB，
   把弃用分类怪和历史素材一起塞进去会让 `index.html` 白涨几百 KB。
   它的取用口径与 `app.js` 的 `monImg()` 三级降级严格对齐——改一边必须改另一边。
 
@@ -154,7 +157,26 @@ node build.mjs
 
 漏登记不会报错，页面自动降级——所以**必须目检页面**，别只看构建成功。
 
-## 六、验收清单
+## 六、封面 banner
+
+`assets/cover.png`（README 顶部那张）不是文生图，是 **HTML 排版截图**——
+版式用页面同一套设计令牌手写在 `scripts/cover.html` 里，图片直接引 `assets/img/opt/*.webp`。
+所以它天然跟站点同风格，改文案不用重新出图：
+
+```bash
+# 1. 改 scripts/cover.html（尺寸写死 1280×640，改版式就改这个文件）
+# 2. 用任意 headless 浏览器按该尺寸截图，2x 出图后缩到 1600×800
+#    Chrome 举例：
+#    <chrome> --headless --disable-gpu --hide-scrollbars \
+#      --force-device-scale-factor=2 --window-size=1280,640 \
+#      --screenshot=assets/cover.png "file://$PWD/scripts/cover.html"
+# 3. 缩放 + 减色压到 ~240KB（PNG 大面积平涂，量化到 192 色肉眼无损）
+```
+
+排版校验别靠肉眼估：`#cover` 是固定 1280×640 的盒子，量各元素相对它的 `left/top/right/bottom`，
+出现负值就是溢出。底部黑条 54px，主怪卡的 `bottom` 要留够。
+
+## 七、验收清单
 
 生成完先看这 6 条，任何一条不过就重跑（重跑很便宜，将就着用会污染整套风格）：
 
@@ -165,9 +187,9 @@ node build.mjs
 - [ ] 描边够粗——缩到 124px 宽（卡面横排头图实际尺寸）还能认出轮廓
 - [ ] 荒诞但不萌，不是 3D 渲染质感
 
-体积参考：单张压缩后 25–60KB。明显超标说明细节太碎（通常伴随描边不够粗），重生成比硬压有效。
+体积参考：单张压缩后 19–38KB（440px webp q75）。明显超标说明细节太碎（通常伴随描边不够粗），重生成比硬压有效。
 
-## 七、已知坑
+## 八、已知坑
 
 - **出图工具会随机断连**：多数文生图 CLI 都有这毛病。`gen-art.sh` 已内置 3 次重试并检查产物是否真的落盘（`-s` 判非空）。
 - **`uv: command not found`**：`opt-art.py` 靠 `uv` 拉依赖。装法 `curl -fsSL https://astral.sh/uv/install.sh | sh`，落在 `~/.local/bin`，记得把它加进 `PATH`。

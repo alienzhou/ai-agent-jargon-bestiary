@@ -32,7 +32,7 @@ npm run new -- <slug> --term "词" --quote "原话"   # 新建词条骨架
 | 事情 | 唯一事实源 | 说明 |
 |---|---|---|
 | 词条**格式**规范 | `scripts/lint-terms.mjs` | 可执行断言。`build.mjs` 复用它的 error 级规则——lint 过不了构建也过不了。改规范先改这里 |
-| 词条**内容**怎么写 | [.agent/COLLECT.md](.agent/COLLECT.md) | 收词流程 + 四个判断题（kind / gloss / actually / usage 怎么定） |
+| 词条**内容**怎么写 | [.agents/skills/collect-term/SKILL.md](.agents/skills/collect-term/SKILL.md) | 收词流程 + 四个判断题（kind / gloss / actually / usage 怎么定） |
 | **素材**风格与管线 | [ART.md](ART.md) | 统一 prompt、四色调色板、命名约定、验收清单 |
 
 `CONTRIBUTING.md` 是给人读的完整版说明；上面三份是干活时按图索骥的。
@@ -40,7 +40,8 @@ npm run new -- <slug> --term "词" --quote "原话"   # 新建词条骨架
 
 ## 收词（最高频任务）
 
-完整流程见 [.agent/COLLECT.md](.agent/COLLECT.md)。要点：
+完整流程见 [.agents/skills/collect-term/SKILL.md](.agents/skills/collect-term/SKILL.md)——它同时是一份
+可被支持 `.agents/skills/` 约定的助手直接触发的 skill（说「收录这个词」即可唤起）。要点：
 
 - 用 `npm run new` 起骨架，别手抄别的词条文件——模板会把 `term` 预填进造句位，避免写出同义变体。
 - 填完跑 `npm run lint -- <slug>`。**不要靠背规则，靠跑校验。**

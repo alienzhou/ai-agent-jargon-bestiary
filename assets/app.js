@@ -146,7 +146,7 @@ function lure(title, desc) {
   return (
     `<div class="lure"><div class="lure-t">${esc(title)}</div>` +
     `<div class="lure-d">${esc(desc)}</div>` +
-    `<a class="cta" href="${esc(SUB)}" target="_blank" rel="noopener noreferrer">投它进图鉴 →</a></div>`
+    `<a class="lure-btn" href="${esc(SUB)}" target="_blank" rel="noopener noreferrer">＋ 丢个词进来</a></div>`
   );
 }
 
@@ -159,7 +159,7 @@ function renderDict() {
       (SUB
         ? lure(
             kwRaw ? `「${kwRaw}」还没被登记` : '这里还空着',
-            kwRaw ? '你撞见它的第一现场——丢过来，给它建张卡' : '丢一个词进来，这片就热闹了'
+            kwRaw ? '你是第一个撞见它的人——丢过来，它就有卡了' : '图鉴靠大家喂，丢一个词进来就热闹了'
           )
         : '');
     return;
@@ -177,7 +177,7 @@ function renderDict() {
     card(t) +
     /* 翻到最后一只：图鉴的边界就是投稿入口——你撞见的下一只，图鉴里还没有 */
     (idx === total - 1 && SUB
-      ? lure('图鉴到这里就翻完了', `在册 ${TERMS.length} 只。你撞见的下一只词，丢过来，给它建张卡`)
+      ? lure('图鉴到这里就翻完了', `在册 ${TERMS.length} 只——剩下的靠大家喂。你手上那只，图鉴还没有`)
       : '');
   $('#pg-prev').onclick = () => nav(-1);
   $('#pg-next').onclick = () => nav(1);
@@ -188,6 +188,7 @@ function nav(d) {
   const list = filtered();
   const n = Math.min(Math.max(idx + d, 0), list.length - 1);
   if (n === idx || !list[n]) return;
+  SFX.play('page', d); /* 音高区分前进/后退，连翻时耳朵能跟上位置 */
   idx = n;
   location.hash = `#/dict/${list[idx].slug}`;
 }
@@ -203,6 +204,7 @@ function refilter() {
 $('#chips').onclick = (e) => {
   const b = e.target.closest('.chip');
   if (!b) return;
+  SFX.play('tick');
   if (b.dataset.k !== undefined) kind = b.dataset.k;
   else cat = b.dataset.c;
   syncChips();
@@ -225,6 +227,7 @@ function syncFbtn() {
 }
 $('#fbtn').onclick = () => {
   const open = $('#ctl').classList.toggle('open');
+  SFX.play('tick');
   $('#fbtn').classList.toggle('open', open);
   $('#fbtn').setAttribute('aria-expanded', String(open));
   if (open) $('#q').focus();
@@ -337,7 +340,16 @@ function initScratch(el) {
   function reveal() {
     el.classList.add('open');
     cv.classList.add('gone');
+    SFX.play('reveal');
     setTimeout(() => cv.remove(), 450);
+  }
+  /* 刮擦声按时间节流：pointermove 一秒几十次，逐次触发会叠成一片白噪音 */
+  let lastSfx = 0;
+  function scratchSfx() {
+    const now = performance.now();
+    if (now - lastSfx < 110) return;
+    lastSfx = now;
+    SFX.play('scratch');
   }
 
   cv.addEventListener('pointerdown', (e) => {
@@ -347,6 +359,7 @@ function initScratch(el) {
     const p = pos(e);
     last = p;
     erase(p.x, p.y);
+    scratchSfx();
   });
   cv.addEventListener('pointermove', (e) => {
     if (!down) return;
@@ -359,6 +372,7 @@ function initScratch(el) {
       for (let i = 1; i <= steps; i++) erase(last.x + (dx * i) / steps, last.y + (dy * i) / steps);
     }
     last = p;
+    scratchSfx();
     if (++moves % 7 === 0 && cleared() > 0.5) reveal();
   });
   cv.addEventListener('pointerup', () => {
@@ -384,6 +398,7 @@ function setMode(m) {
 $('#tabs').onclick = (e) => {
   const b = e.target.closest('.tab');
   if (!b) return;
+  SFX.play('swap');
   const t = filtered()[idx];
   location.hash = b.dataset.m === 'quiz' ? '#/quiz' : t ? `#/dict/${t.slug}` : '#/dict';
 };
@@ -511,9 +526,11 @@ function answer(btn, t) {
 
   const f = $('#field');
   if (ok) {
+    SFX.play('hit');
     $('#foe').classList.add('dmg');
     f.insertAdjacentHTML('beforeend', `<div class="pop">HIT!</div>`);
   } else {
+    SFX.play('miss');
     f.classList.add('hit');
     f.insertAdjacentHTML('beforeend', `<div class="pop">${POP[qi % POP.length]}</div>`);
   }
@@ -526,6 +543,7 @@ function answer(btn, t) {
     `<div class="verdict">${r.join('')}</div>` +
     `<button class="go">${qi < qs.length - 1 ? '下一只 →' : '看战绩 →'}</button>`;
   $('.go').onclick = () => {
+    SFX.play('page', 1);
     qi++;
     qi < qs.length ? renderQ() : renderResult();
   };
@@ -541,6 +559,8 @@ function rank(n, total) {
 }
 
 function renderResult() {
+  /* 结算音跟着评级走：及格线以上放胜利旋律，以下放泄气下行 */
+  SFX.play(qs.length && hits / qs.length >= 0.7 ? 'win' : 'lose');
   $('#quiz').innerHTML =
     `<div class="field"><div class="result">` +
     (IMG['mascot-guide'] ? `<img class="guide" src="${IMG['mascot-guide']}" alt="">` : '') +
@@ -552,9 +572,12 @@ function renderResult() {
           .join('')}</div>`
       : '') +
     `<button class="go" id="again">再来一局</button>` +
-    (SUB ? `<a class="cta" href="${esc(SUB)}" target="_blank" rel="noopener noreferrer">路上还有新黑话？丢过来——你投的词，会变成下一张卡 →</a>` : '') +
+    (SUB ? `<a class="lure-btn" href="${esc(SUB)}" target="_blank" rel="noopener noreferrer">＋ 丢个词进来，一起攒这本图鉴</a>` : '') +
     `</div></div>`;
-  $('#again').onclick = startQuiz;
+  $('#again').onclick = () => {
+    SFX.play('coin'); /* 再来一局＝再投一枚币 */
+    startQuiz();
+  };
 }
 
 /* ================= 启动 ================= */
@@ -567,30 +590,84 @@ syncTopH();
 addEventListener('resize', syncTopH);
 
 if (META && META.count != null) $('#n-total').textContent = META.count;
+
+/* 静音开关：有声音就必须有关掉它的地方——办公室里打开这页不该被出卖。
+   状态存 localStorage，下次进来仍然是静音。 */
+(function sfxToggle() {
+  const b = $('#sfx');
+  if (!b) return;
+  const sync = () => {
+    b.textContent = SFX.on ? '🔊' : '🔇';
+    b.classList.toggle('off', !SFX.on);
+    b.setAttribute('aria-label', SFX.on ? '关闭音效' : '开启音效');
+    b.setAttribute('aria-pressed', String(!SFX.on));
+  };
+  b.onclick = () => {
+    SFX.toggle();
+    sync();
+  };
+  sync();
+})();
 route();
 
-/* 投币开场 */
+/* ================= 投币开场 =================
+   四拍：待机闪烁 → 金币落进币口（叮）→ CRT 通电（琶音 + 扫描线）→ 退场。
+   这里同时是整站音频的点火点：AudioContext 必须诞生在用户手势里，
+   而「点击投币」天然就是第一次手势——把它挪走音效会被浏览器静音策略掐掉。
+
+   全程可跳过：动效跑着的时候再点一下直接落地，不许让开场挡路。 */
 (function boot() {
   const el = document.createElement('div');
   el.id = 'boot';
   el.innerHTML =
-    `<div><div class="logo">AI Agent 的<br>黑话图鉴</div>` +
+    `<div class="boot-in">` +
+    `<div class="logo">AI Agent 的<br>黑话图鉴</div>` +
     `<div class="sub">Jargon Bestiary</div>` +
     (IMG['mascot-guide'] ? `<img class="guide" src="${IMG['mascot-guide']}" alt="">` : '') +
-    `<div class="coin">▶ 点击投币开始 · 已收录 ${TERMS.length} 只</div></div>`;
+    /* 币口是真的投币口：金币动画沿它落下，落点和这个槽对齐 */
+    `<div class="slot"><i class="coin-fly"></i><span class="mouth"></span>` +
+    `<em class="lit">INSERT COIN</em></div>` +
+    `<div class="coin">▶ 点击投币开始 · 已收录 ${TERMS.length} 只</div>` +
+    `<div class="ready">CREDIT 1 &nbsp;·&nbsp; PUSH START</div>` +
+    `</div><div class="crt"></div>`;
   document.body.appendChild(el);
   document.body.style.overflow = 'hidden';
-  const open = () => {
+
+  let started = false;
+  let timers = [];
+  const done = () => {
+    timers.forEach(clearTimeout);
     el.classList.add('gone');
     document.body.style.overflow = '';
     setTimeout(() => el.remove(), 500);
   };
-  /* 任意交互都能进场，别让开场挡路 */
-  ['click', 'pointerdown', 'touchstart', 'wheel'].forEach((ev) =>
-    el.addEventListener(ev, open, { passive: true })
+
+  const start = () => {
+    if (started) return done(); /* 二次点击 = 跳过剩余动效 */
+    started = true;
+    el.classList.add('inserting');
+    SFX.play('coin'); /* 第一声：AudioContext 在这一刻被创建 */
+    /* 减弱动效偏好下，全局 CSS 把动画压到 0.01ms，再等 1.5 秒就是干瞪眼。
+       声音留着（那不是动效），画面直接进场。 */
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      SFX.play('boot');
+      return timers.push(setTimeout(done, 120));
+    }
+    /* 金币落到底 → 机器通电 → 亮一下 → 走人。时序和 CSS 动画长度对齐 */
+    timers.push(setTimeout(() => {
+      el.classList.add('powered');
+      SFX.play('boot');
+    }, 620));
+    timers.push(setTimeout(done, 1560));
+  };
+
+  ['click', 'pointerdown', 'touchstart'].forEach((ev) =>
+    el.addEventListener(ev, start, { passive: true })
   );
-  document.addEventListener('keydown', function k() {
-    open();
+  el.addEventListener('wheel', start, { passive: true });
+  document.addEventListener('keydown', function k(e) {
+    if (e.key === 'Tab') return; /* 留给键盘用户先看清界面 */
+    start();
     document.removeEventListener('keydown', k);
   });
 })();
