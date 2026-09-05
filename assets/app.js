@@ -705,15 +705,23 @@ route();
   el.id = 'boot';
   el.innerHTML =
     `<div class="boot-in">` +
-    `<div class="logo">AI 黑话的<br>怪兽图鉴</div>` +
+    `<div class="boot-stage">` +
+    `<div class="boot-burst" aria-hidden="true"></div>` +
+    `<span class="boot-edition">野生黑话出没注意 · VOL. 001</span>` +
+    (IMG['boot-boss'] ? `<img class="boot-beast" src="${IMG['boot-boss']}" alt="" draggable="false">` : '') +
+    `<div class="boot-kicker">AI 黑话的<span aria-hidden="true"> ↘</span></div>` +
+    `<h1 class="logo">怪兽图鉴</h1>` +
+    (IMG['boot-boss'] ? `<img class="boot-beast boot-claws" src="${IMG['boot-boss']}" alt="" draggable="false">` : '') +
     `<div class="sub">Jargon Bestiary</div>` +
-    (IMG['mascot-guide'] ? `<img class="guide" src="${IMG['mascot-guide']}" alt="">` : '') +
+    (IMG['boot-guide'] ? `<aside class="boot-guide"><span>又让它说上了。</span><img src="${IMG['boot-guide']}" alt="猫头鹰向导" draggable="false"></aside>` : '') +
+    `</div><div class="boot-start">` +
     /* 币口是真的投币口：金币动画沿它落下，落点和这个槽对齐 */
-    `<div class="slot"><i class="coin-fly"></i><span class="mouth"></span>` +
-    `<em class="lit">INSERT COIN</em></div>` +
-    `<div class="coin">▶ 点击投币开始 · 已收录 ${TERMS.length} 只</div>` +
-    `<div class="ready">CREDIT 1 &nbsp;·&nbsp; PUSH START</div>` +
-    `</div>` +
+    `<div class="slot"><span class="mouth"></span><span class="coin-track" aria-hidden="true"><i class="coin-fly"></i></span>` +
+    `<em class="lit">INSERT COIN</em><span class="credit-meter">CREDIT <b>00</b></span></div>` +
+    `<div class="boot-prompt"><div class="coin"><svg class="pixel-start" viewBox="0 0 65 7" role="img" aria-label="PRESS START" shape-rendering="crispEdges"><path fill="currentColor" d="M0 0h1v1h-1z M1 0h1v1h-1z M2 0h1v1h-1z M3 0h1v1h-1z M0 1h1v1h-1z M4 1h1v1h-1z M0 2h1v1h-1z M4 2h1v1h-1z M0 3h1v1h-1z M1 3h1v1h-1z M2 3h1v1h-1z M3 3h1v1h-1z M0 4h1v1h-1z M0 5h1v1h-1z M0 6h1v1h-1z M6 0h1v1h-1z M7 0h1v1h-1z M8 0h1v1h-1z M9 0h1v1h-1z M6 1h1v1h-1z M10 1h1v1h-1z M6 2h1v1h-1z M10 2h1v1h-1z M6 3h1v1h-1z M7 3h1v1h-1z M8 3h1v1h-1z M9 3h1v1h-1z M6 4h1v1h-1z M8 4h1v1h-1z M6 5h1v1h-1z M9 5h1v1h-1z M6 6h1v1h-1z M10 6h1v1h-1z M12 0h1v1h-1z M13 0h1v1h-1z M14 0h1v1h-1z M15 0h1v1h-1z M16 0h1v1h-1z M12 1h1v1h-1z M12 2h1v1h-1z M12 3h1v1h-1z M13 3h1v1h-1z M14 3h1v1h-1z M15 3h1v1h-1z M12 4h1v1h-1z M12 5h1v1h-1z M12 6h1v1h-1z M13 6h1v1h-1z M14 6h1v1h-1z M15 6h1v1h-1z M16 6h1v1h-1z M19 0h1v1h-1z M20 0h1v1h-1z M21 0h1v1h-1z M22 0h1v1h-1z M18 1h1v1h-1z M18 2h1v1h-1z M19 3h1v1h-1z M20 3h1v1h-1z M21 3h1v1h-1z M22 4h1v1h-1z M22 5h1v1h-1z M18 6h1v1h-1z M19 6h1v1h-1z M20 6h1v1h-1z M21 6h1v1h-1z M25 0h1v1h-1z M26 0h1v1h-1z M27 0h1v1h-1z M28 0h1v1h-1z M24 1h1v1h-1z M24 2h1v1h-1z M25 3h1v1h-1z M26 3h1v1h-1z M27 3h1v1h-1z M28 4h1v1h-1z M28 5h1v1h-1z M24 6h1v1h-1z M25 6h1v1h-1z M26 6h1v1h-1z M27 6h1v1h-1z M37 0h1v1h-1z M38 0h1v1h-1z M39 0h1v1h-1z M40 0h1v1h-1z M36 1h1v1h-1z M36 2h1v1h-1z M37 3h1v1h-1z M38 3h1v1h-1z M39 3h1v1h-1z M40 4h1v1h-1z M40 5h1v1h-1z M36 6h1v1h-1z M37 6h1v1h-1z M38 6h1v1h-1z M39 6h1v1h-1z M42 0h1v1h-1z M43 0h1v1h-1z M44 0h1v1h-1z M45 0h1v1h-1z M46 0h1v1h-1z M44 1h1v1h-1z M44 2h1v1h-1z M44 3h1v1h-1z M44 4h1v1h-1z M44 5h1v1h-1z M44 6h1v1h-1z M49 0h1v1h-1z M50 0h1v1h-1z M51 0h1v1h-1z M48 1h1v1h-1z M52 1h1v1h-1z M48 2h1v1h-1z M52 2h1v1h-1z M48 3h1v1h-1z M49 3h1v1h-1z M50 3h1v1h-1z M51 3h1v1h-1z M52 3h1v1h-1z M48 4h1v1h-1z M52 4h1v1h-1z M48 5h1v1h-1z M52 5h1v1h-1z M48 6h1v1h-1z M52 6h1v1h-1z M54 0h1v1h-1z M55 0h1v1h-1z M56 0h1v1h-1z M57 0h1v1h-1z M54 1h1v1h-1z M58 1h1v1h-1z M54 2h1v1h-1z M58 2h1v1h-1z M54 3h1v1h-1z M55 3h1v1h-1z M56 3h1v1h-1z M57 3h1v1h-1z M54 4h1v1h-1z M56 4h1v1h-1z M54 5h1v1h-1z M57 5h1v1h-1z M54 6h1v1h-1z M58 6h1v1h-1z M60 0h1v1h-1z M61 0h1v1h-1z M62 0h1v1h-1z M63 0h1v1h-1z M64 0h1v1h-1z M62 1h1v1h-1z M62 2h1v1h-1z M62 3h1v1h-1z M62 4h1v1h-1z M62 5h1v1h-1z M62 6h1v1h-1z"/></svg></div>` +
+    `<div class="ready">READY · 开始抓怪</div></div>` +
+    `<div class="boot-count">${TERMS.length} 只黑话怪兽已入册 · 等你撞见下一只</div>` +
+    `</div></div>` +
     /* BGM 开关放开场页底角：这是唯一能在「第一声响起之前」够到的地方，
        但它不是主诉求——主诉求是投币。所以做成角落里的一行小字，
        想关的人找得到，不想管的人不会被它挡住视线。 */
@@ -746,7 +754,7 @@ route();
     started = true;
     startedAt = performance.now();
     el.classList.add('inserting');
-    SFX.play('coin'); /* 第一声：AudioContext 在这一刻被创建 */
+    SFX.play('coinTouch'); /* 第一声：AudioContext 在这一刻被创建 */
     /* 用户在开场页勾了配乐 -> 现在落地。BGM 必须搭这趟手势的车启动，
        否则自动播放策略会把它挂起。 */
     const opt = el.querySelector('#bgm-opt');
@@ -759,6 +767,11 @@ route();
       SFX.play('boot');
       return timers.push(setTimeout(done, 120));
     }
+    timers.push(setTimeout(() => {
+      el.classList.add('accepted');
+      el.querySelector('.credit-meter b').textContent = '01';
+      SFX.play('coinAccept');
+    }, 480));
     /* 金币落到底 → 机器通电 → 亮一下 → 走人。时序和 CSS 动画长度对齐 */
     timers.push(setTimeout(() => {
       el.classList.add('powered');

@@ -25,6 +25,7 @@ npm run dev            # 开发服务器，改词条自动重编译 + 刷新
 npm run lint           # 校验全部词条格式
 npm run lint -- <slug> # 只校验某几条
 npm run new -- <slug> --term "词" --quote "原话"   # 新建词条骨架
+npm run cover          # 重出封面图（横版 README + 竖版视频），改了开场页版式要跟着跑
 ```
 
 ## 三份事实源，别另起一套

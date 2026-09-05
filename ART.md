@@ -159,22 +159,49 @@ node build.mjs
 
 ## 六、封面 banner
 
-`assets/cover.png`（README 顶部那张）不是文生图，是 **HTML 排版截图**——
-版式用页面同一套设计令牌手写在 `scripts/cover.html` 里，图片直接引 `assets/img/opt/*.webp`。
-所以它天然跟站点同风格，改文案不用重新出图：
+### 投币开场的透明立绘
+
+开场使用 `boot-boss.webp` / `boot-guide.webp`，是现有 Boss 和向导的独立透明版本，
+不替换卡面原图。它们是上面奶油背景、440px 卡面尺寸规则的特例：红底开场需要真实 alpha，
+以便角色与标题前后交叠；角色内部的奶油色（牙齿、眼睛、衣服）必须保持不透明。
+Boss 长边 960px，向导长边 300px，WebP q80；生成的 PNG 仍不入库。
+前爪层复用 Boss 数据，通过 CSS 裁切，不额外内联一份图片。
+`build.mjs` 的 `imgData()` 显式收录这两张；缺图时开场仍显示标题和投币入口。
+
+透明版的编辑提示词：
+
+> Remove only the exterior cream paper background, including gaps between limbs, and output actual alpha transparency. Preserve the referenced full-body character, pose, props, thick black outlines, vintage print texture and cream / vermilion / ink / gold palette. Keep cream interior details opaque. No new objects, text, scene or painted checkerboard.
+
+这次透明版由内置图像编辑工具制作；后续可用任意支持参考图与 alpha 的工具复现，
+不改变 `JARGON_IMAGE_CMD` 的通用接口。验收还需检查标题可读、前爪与身体坐标一致、
+手机竖屏和短横屏的投币入口与声音开关可见。
+
+### 封面（README + 视频）
+
+封面不是文生图，是 **HTML 排版截图**——版式手写在 `scripts/cover.html` 里，
+图片直接引 `assets/img/opt/*.webp`。所以它天然跟站点同风格，改文案不用重新出图。
+
+**视觉口径 = 投币开场页**（`app.css` 的 `#boot`）：红底 + 半调网点 + 金色爆炸星 +
+巨大米色描边标题压过怪兽 + 前爪层反压标题 + 猫头鹰向导 + 底部黑条。
+动开场页的版式，封面要跟着动，否则两边像两个项目。
+
+一份源文件出两张图，由 `?v=<变体>` 切换：
+
+| 变体 | 尺寸 | 产物 | 用途 |
+|---|---|---|---|
+| `wide` | 1280×640 | `assets/cover.png` | README 顶部 |
+| `tall` | 1080×1440 | `assets/cover-vertical.png` | 竖屏视频封面（3:4） |
 
 ```bash
-# 1. 改 scripts/cover.html（尺寸写死 1280×640，改版式就改这个文件）
-# 2. 用任意 headless 浏览器按该尺寸截图，2x 出图后缩到 1600×800
-#    Chrome 举例：
-#    <chrome> --headless --disable-gpu --hide-scrollbars \
-#      --force-device-scale-factor=2 --window-size=1280,640 \
-#      --screenshot=assets/cover.png "file://$PWD/scripts/cover.html"
-# 3. 缩放 + 减色压到 ~240KB（PNG 大面积平涂，量化到 192 色肉眼无损）
+npm run cover     # 两张一起出；Chrome 路径可用 CHROME=<路径> 覆盖
 ```
 
-排版校验别靠肉眼估：`#cover` 是固定 1280×640 的盒子，量各元素相对它的 `left/top/right/bottom`，
-出现负值就是溢出。底部黑条 54px，主怪卡的 `bottom` 要留够。
+舞台内所有尺寸用 `em`，换变体只改 `#cover` 的 `font-size` + 那几条 `.wide` / `.tall`
+定位覆盖，不要在变体里重写整套样式。
+
+排版校验别靠肉眼估：`#cover` 是固定尺寸的盒子，量各元素相对它的 `left/top/right/bottom`，
+出现负值就是溢出。**底部黑条会吃掉一截高度**，舞台高度和卡牌 `bottom` 都要给它让位——
+猫头鹰在舞台右下角，最容易被压掉头。
 
 ## 七、验收清单
 
@@ -198,4 +225,3 @@ node build.mjs
 - **浏览器里 `innerHeight` 可能是 0**（自动化标签页尤其常见）：校验吸顶行为别用视口绝对坐标，
   改判「翻页条相对 `#files` 顶部被推开多少」。现成脚本见 [`scripts/verify-page.js`](scripts/verify-page.js)：
   打开 `dist/index.html`，把它整段贴进 DevTools Console，返回一段 JSON 结论。
-

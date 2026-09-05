@@ -74,101 +74,149 @@ button:focus:not(:focus-visible), summary:focus:not(:focus-visible) { outline: n
   overscroll-behavior: contain;
 }
 #boot.gone { opacity: 0; transform: scale(1.08); pointer-events: none; }
-#boot .boot-in { position: relative; z-index: 2; }
+/* 开场立绘和标题共用舞台坐标；前爪复用同一图，只裁显示区域。 */
+#boot { padding: 24px 12px 58px; }
+#boot::before {
+  content: ''; position: absolute; inset: 12px; pointer-events: none;
+  border: 1px solid rgba(242,232,213,.25);
+  background: radial-gradient(var(--ink) .8px, transparent 1px) 0 0 / 6px 6px;
+  opacity: .1;
+}
+#boot .boot-in { position: relative; z-index: 2; width: 100%; }
+#boot .boot-stage {
+  position: relative; isolation: isolate; margin: auto;
+  width: min(920px, 94vw, calc((100svh - 230px) * 1.6));
+  aspect-ratio: 1.6; font-size: min(10px, 1.02vw);
+}
+#boot .boot-burst {
+  position: absolute; inset: 4% 13% 5%; z-index: -1;
+  background: var(--gold); transform: rotate(-8deg);
+  clip-path: polygon(50% 0,58% 19%,76% 3%,75% 28%,98% 19%,84% 42%,100% 53%,80% 63%,94% 88%,68% 80%,62% 100%,47% 84%,27% 99%,28% 78%,3% 88%,17% 64%,0 50%,19% 40%,5% 17%,32% 24%,34% 2%,44% 20%);
+}
+#boot .boot-edition {
+  position: absolute; top: 6%; left: 0; font-size: 11px; font-weight: 800;
+  letter-spacing: .2em; writing-mode: vertical-rl;
+}
+#boot .boot-beast {
+  position: absolute; height: 100%; width: 66%; max-width: none;
+  object-fit: contain; left: 22%; top: -5%; pointer-events: none;
+}
+#boot .boot-kicker {
+  position: absolute; top: 37%; left: 4%; z-index: 2;
+  padding: 2px 14px; color: var(--paper); background: var(--ink);
+  font-size: clamp(17px, 3vw, 32px); font-weight: 900; transform: rotate(-6deg);
+}
+#boot .boot-kicker span { color: var(--gold); }
 #boot .logo {
-  font-size: clamp(38px, 11vw, 78px);
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  line-height: 1.06;
-  text-shadow: 5px 5px 0 var(--ink);
+  position: absolute; z-index: 3; top: 51%; left: 0; width: 100%; margin: 0;
+  font-size: min(18vw, 176px, calc((100svh - 230px) * .30)); font-weight: 1000; letter-spacing: -.045em;
+  line-height: 1.1; white-space: nowrap; transform: rotate(-5deg);
+  color: var(--paper); -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill; text-shadow: 7px 9px 0 var(--ink);
 }
+#boot .boot-claws { z-index: 4; clip-path: polygon(0 57%, 34% 57%, 34% 73%, 0 73%, 0 57%, 68% 57%, 100% 57%, 100% 74%, 68% 74%, 68% 57%); }
 #boot .sub {
-  margin-top: 14px;
-  font-size: 13px;
-  letter-spacing: 0.4em;
-  opacity: 0.85;
-  text-transform: uppercase;
+  position: absolute; left: 4%; top: 94%; z-index: 5;
+  font-size: clamp(9px, 1.4vw, 14px); font-weight: 900; letter-spacing: .32em;
+  text-transform: uppercase; transform: rotate(-5deg);
 }
-#boot .guide { width: min(175px, 40vw); margin: 20px auto 0; display: block; }
+#boot .boot-guide { position: absolute; z-index: 5; right: 0; bottom: -3%; width: 18%; transform: rotate(8deg); }
+#boot .boot-guide img { display: block; width: 100%; }
+#boot .boot-guide span {
+  position: absolute; white-space: nowrap; right: 30%; bottom: 100%;
+  padding: 3px 9px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink);
+  font-size: 12px; font-weight: 900; box-shadow: 3px 3px 0 var(--ink); transform: rotate(-12deg);
+}
+#boot .boot-start { position: relative; z-index: 6; margin: 16px auto 0; }
+#boot .boot-count { font-size: 11px; letter-spacing: .12em; opacity: .75; margin-top: 6px; }
 #boot .coin {
-  margin-top: 22px;
+  margin-top: 12px;
   font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.24em;
-  animation: blink 1s steps(2) infinite;
 }
-@keyframes blink { 50% { opacity: 0.15; } }
 
-/* 投币口：一条黑槽 + 槽口高光。金币动画沿它落下，落点对准槽心 */
-#boot .slot {
-  position: relative;
-  width: 132px;
-  margin: 40px auto 0; /* 留出金币待机悬停的高度，别压到吉祥物身上 */
-  height: 34px;
+/* 固定点阵字直接内联，不加载字体。只闪开始提示，中文说明常亮。 */
+#boot .pixel-start {
+  display: block; width: min(195px, 60vw); height: 21px; margin: 0 auto 8px;
+  color: var(--gold); filter: drop-shadow(2px 2px 0 var(--ink));
+  animation: press-start-blink 1.6s steps(1, end) infinite;
 }
+@keyframes press-start-blink { 0%, 64%, 100% { opacity: 1; } 65% { opacity: 0; } }
+#boot.inserting .pixel-start { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  #boot .pixel-start { animation: none; opacity: 1; }
+}
+
+/* 代币舞台在币槽前沿处裁切：硬币落入机箱，不用透明度模拟消失。
+   480ms 吃币 / 620ms 通电 / 1560ms 退场，与 boot() 同步。 */
+#boot .slot {
+  position: relative; isolation: isolate; width: 184px; height: 72px;
+  margin: 32px auto 0; background: var(--paper); color: var(--ink);
+  border: 3px solid var(--ink); border-radius: 5px;
+  box-shadow: 4px 5px 0 var(--ink);
+}
+#boot .slot::before, #boot .slot::after {
+  content: ''; position: absolute; top: 9px; width: 6px; height: 6px;
+  border: 1px solid var(--ink); border-radius: 50%;
+  background: linear-gradient(135deg, transparent 40%, var(--ink) 42% 57%, transparent 59%);
+}
+#boot .slot::before { left: 8px; }
+#boot .slot::after { right: 8px; }
 #boot .slot .mouth {
-  position: absolute;
-  left: 50%;
-  top: 12px;
-  width: 46px;
-  height: 9px;
-  margin-left: -23px;
-  border-radius: 3px;
-  background: var(--ink);
-  box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.6), 0 2px 0 rgba(242, 232, 213, 0.35);
+  position: absolute; left: 50%; top: 12px; width: 54px; height: 10px;
+  margin-left: -27px; border-radius: 3px; background: var(--ink);
+  box-shadow: 0 2px 0 var(--gold);
+}
+#boot .coin-track {
+  position: absolute; left: 50%; top: -46px; width: 64px; height: 66px;
+  margin-left: -32px; overflow: hidden; pointer-events: none;
+}
+#boot .coin-fly {
+  position: absolute; left: 50%; top: 4px; width: 32px; height: 32px;
+  margin-left: -16px; border-radius: 50%; background: var(--gold);
+  border: 2px solid var(--ink); box-shadow: inset 0 0 0 2px var(--paper), 3px 0 0 var(--ink);
+  animation: coin-idle 3.6s linear infinite;
+}
+#boot .coin-fly::after {
+  content: ''; position: absolute; inset: 7px; background: var(--ink);
+  clip-path: polygon(50% 0,61% 35%,100% 38%,70% 61%,80% 100%,50% 77%,20% 100%,30% 61%,0 38%,39% 35%);
 }
 #boot .slot .lit {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -4px;
-  font-size: 10px;
-  font-style: normal;
-  font-weight: 900;
-  letter-spacing: 0.28em;
-  opacity: 0.55;
+  position: absolute; top: 29px; left: 0; right: 0;
+  font: 900 10px/1 monospace; letter-spacing: .15em;
 }
-/* 金币：CSS 画的硬币，默认悬在槽口上方待机浮动 */
-#boot .coin-fly {
-  position: absolute;
-  left: 50%;
-  top: -26px;
-  width: 26px;
-  height: 26px;
-  margin-left: -13px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 34% 30%, #f2d873, var(--gold) 62%, #8a6f14);
-  border: 2.5px solid var(--ink);
-  animation: coin-idle 1.6s ease-in-out infinite;
+#boot .slot .lit::before {
+  content: ''; display: inline-block; width: 6px; height: 6px;
+  margin-right: 6px; border: 1px solid var(--ink); background: var(--gold);
 }
+#boot .credit-meter { position: absolute; top: 46px; left: 0; right: 0; font: 900 11px/1 monospace; letter-spacing: .1em; }
+#boot .credit-meter b { display: inline-block; }
 @keyframes coin-idle {
-  50% { transform: translateY(-6px) rotate(8deg); }
+  0%, 76%, 100% { transform: scaleX(1); }
+  82%, 94% { transform: scaleX(.22); }
+  88% { transform: scaleX(1); }
 }
-/* 投币瞬间：金币旋转下坠，穿过槽口后消失；币口被撞得一沉 */
-#boot.inserting .coin-fly {
-  animation: coin-drop 0.5s cubic-bezier(0.5, 0, 0.85, 0.4) forwards;
-}
+#boot.inserting .coin-fly { animation: coin-drop .48s ease-in forwards; }
 @keyframes coin-drop {
-  0% { transform: translateY(0) rotateY(0deg); opacity: 1; }
-  70% { transform: translateY(42px) rotateY(540deg) scaleX(0.35); opacity: 1; }
-  100% { transform: translateY(52px) rotateY(720deg) scaleX(0.1); opacity: 0; }
+  0% { transform: translateY(0) scaleX(1); }
+  24% { transform: translateY(-4px) scaleX(.8); }
+  60% { transform: translateY(12px) scaleX(.3); }
+  100% { transform: translateY(68px) scaleX(.3); }
 }
-#boot.inserting .slot { animation: slot-knock 0.22s ease-out 0.42s; }
-@keyframes slot-knock {
-  50% { transform: translateY(3px); }
-}
-/* 投币后待机提示换成 CREDIT 行：告诉你币吃进去了 */
+#boot.accepted .slot { animation: slot-knock .14s ease-out; }
+#boot.accepted .credit-meter b { animation: credit-tick .16s steps(2); }
+#boot.accepted .lit::before { background: var(--red); }
+@keyframes slot-knock { 50% { transform: translateY(3px); box-shadow: 4px 2px 0 var(--ink); } }
+@keyframes credit-tick { from { transform: translateY(-3px); } to { transform: translateY(0); } }
+#boot .boot-prompt { position: relative; }
 #boot .ready {
-  margin-top: 10px;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.22em;
-  color: var(--gold);
-  opacity: 0;
+  pointer-events: none;
+  position: absolute; left: 0; right: 0; top: 0; margin: 0;
+  font: 900 14px/1.7 monospace; letter-spacing: .18em; color: var(--paper); opacity: 0;
 }
-#boot.inserting .coin { animation: none; opacity: 0; transition: opacity 0.15s; }
-#boot.inserting .ready { animation: credit 0.9s steps(2) 0.5s 3; }
-@keyframes credit { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+#boot.inserting .coin { animation: none; opacity: 0; }
+#boot.accepted .ready { opacity: 1; }
 
 /* 通电：整块内容被电流抖一下 + 一记白闪，然后 CRT 扫描线扫过全屏 */
 #boot.powered .boot-in { animation: power-jolt 0.42s ease-out; }
@@ -217,9 +265,8 @@ button:focus:not(:focus-visible), summary:focus:not(:focus-visible) { outline: n
    这里做成街机面板上的指示灯，一枚小金币亮着就是「在放」。 */
 #boot .bgm-ask {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: calc(16px + env(safe-area-inset-bottom));
+  left: max(20px, env(safe-area-inset-left));
+  bottom: calc(12px + env(safe-area-inset-bottom));
   z-index: 4;
   text-align: center;
 }
@@ -227,7 +274,8 @@ button:focus:not(:focus-visible), summary:focus:not(:focus-visible) { outline: n
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 10px;
+  padding: 12px 10px;
+  min-height: 44px;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -360,6 +408,33 @@ button:focus:not(:focus-visible), summary:focus:not(:focus-visible) { outline: n
   0%, 88%, 100% { box-shadow: var(--shadow-sm); }
   94% { box-shadow: 4px 4px 0 var(--ink), 0 0 0 5px rgba(180, 52, 44, 0.22); }
 }
+/* 竖屏保持主标题完整；短横屏把入口挪到右侧，避免挤出屏幕。 */
+@media (max-width: 600px) and (min-height: 501px) {
+  #boot .boot-stage { width: min(94vw, calc((100svh - 235px) * 1.05)); aspect-ratio: 1.05; }
+  #boot .boot-beast { width: 92%; left: 7%; top: -2%; }
+  #boot .boot-burst { inset: 4% 0 5%; }
+  #boot .logo { top: 56%; font-size: min(21vw, calc((100svh - 235px) * .23)); -webkit-text-stroke-width: 1.5px; text-shadow: 4px 6px 0 var(--ink); }
+  #boot .boot-kicker { top: 44%; left: 2%; font-size: 21px; }
+  #boot .sub { top: 91%; left: 2%; font-size: 9px; letter-spacing: .18em; }
+  #boot .boot-guide { width: 20%; bottom: -7%; }
+  #boot .boot-guide span { font-size: 10px; right: 85%; bottom: 5%; }
+  #boot .boot-edition { font-size: 9px; letter-spacing: .08em; }
+  #boot .coin { font-size: 13px; letter-spacing: .08em; }
+  #boot .boot-count { font-size: 10px; letter-spacing: .02em; }
+}
+@media (max-height: 500px) {
+  #boot { padding: 14px 20px 48px; }
+  #boot .boot-in { display: flex; align-items: center; justify-content: center; gap: 16px; }
+  #boot .boot-stage { margin: 0; width: min(55vw, calc((100svh - 72px) * 1.4)); flex-shrink: 0; aspect-ratio: 1.4; }
+  #boot .logo { font-size: min(7.8vw, 15svh); text-shadow: 4px 5px 0 var(--ink); }
+  #boot .boot-start { margin: 0; max-width: 40%; }
+  #boot .boot-kicker { font-size: 18px; }
+  #boot .boot-edition, #boot .boot-guide span { display: none; }
+  #boot .coin { font-size: 12px; letter-spacing: .04em; }
+  #boot .boot-count { font-size: 10px; letter-spacing: 0; }
+  #boot .sub { font-size: 8px; letter-spacing: .16em; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .coinbtn { animation: none; }
 }
